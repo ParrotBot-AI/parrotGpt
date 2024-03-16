@@ -1,0 +1,11 @@
+openai~=1.3.7
+fastapi~=0.100.1
+pydantic~=2.1.1
+nltk~=3.8.1
+requests==2.27.1
+fire~=0.4.0
+python-crontab~=2.6.0
+setuptools~=65.5.0
+crontab~=0.23.0
+uvicorn
+pytz
