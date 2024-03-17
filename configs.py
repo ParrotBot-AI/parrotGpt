@@ -1,4 +1,4 @@
-ENV_PATH = "/root/enter/envs/parrotbot/bin"
+ENV_PATH = "/home/ubuntu/anaconda3/envs/parrotgpt/bin/python"
 HOST = '0.0.0.0'
 PORT = '8000'
 DEBUG = True
