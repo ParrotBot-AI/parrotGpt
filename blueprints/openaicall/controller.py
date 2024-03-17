@@ -1,10 +1,10 @@
 import openai
+from openai import OpenAI
 import json
-import time
-import hashlib
-import requests
-import urllib.request as urllib2
 from blueprints.openaicall.prompts import *
+from configs import OPEN_AI_API_KEY
+from threading import Thread
+from queue import Queue, Empty
 
 class OpenAIController():
   def GeneralOpenAICall(
@@ -65,3 +65,41 @@ class OpenAIController():
       return False, "Not Safe Content"
     elif valid == 2:
       return False, "GPT Error"
+
+  def OpenAiStreaming(self, model, sys_prompt, user_prompt, token_size, temp):
+    def generate_stream(queue):
+      try:
+        client = OpenAI(api_key=OPEN_AI_API_KEY)
+        response = client.chat.completions.create(
+          model=model,
+          messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+          ],
+          temperature=temp,
+          max_tokens=token_size,
+          stream=True
+        )
+        for chunk in response:
+          if chunk.choices[0].delta.content != None:
+            data = chunk.choices[0].delta.content
+            queue.put(f"data: {data}\n")
+          else:
+            queue.put(f"data: [DONE!]")
+            break  # Exit if no content
+      finally:
+        queue.put(None)  # Signal that streaming is done
+
+    queue = Queue()
+    Thread(target=generate_stream, args=(queue,), daemon=True).start()
+    async def event_generator():
+      while True:
+        try:
+          data = queue.get(timeout=20)  # Adjust timeout as necessary
+          if data is None:
+            break
+          yield data
+        except Empty:
+          break
+
+    return event_generator()

@@ -9,3 +9,4 @@ setuptools~=65.5.0
 crontab~=0.23.0
 uvicorn
 pytz
+sseclient

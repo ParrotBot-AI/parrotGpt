@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SSE Stream with Initial Input</title>
+</head>
+<body>
+    <h2>SSE Stream with Initial Input</h2>
+    <div id="streamOutput"></div>
+
+    <script>
+        // Function to send initial setup data
+        async function sendInitialData() {
+            const response = await fetch('http://localhost:8000/v1/modelapi/assistantChatbot/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    queryType: "a",
+                    chatbotQuery: "Write me a passage about the TOEFL exam",
+                    passage: "a",
+                    mcq: "a",
+                })
+            });
+
+            if (response.ok) {
+                const responseData = await response.json();
+
+                if (responseData.code == 10000){
+                    const client_id  = responseData.data.clientId
+                    console.log(client_id, 29);
+                    connectSSE(client_id);
+                } else {
+                    console.error("Failed to send setup data");
+                }
+
+            } else {
+                console.error("Failed to send setup data");
+            }
+        }
+
+        // Function to connect to the SSE endpoint
+        function connectSSE(client_id) {
+            console.log(client_id, 45);
+            const eventSource = new EventSource(`http://localhost:8000/v1/modelapi/assistantChatbot/${client_id}/`);
+
+            eventSource.onmessage = function(event) {
+                const streamOutput = document.getElementById('streamOutput');
+                console.log(`${event.data}`)
+                streamOutput.innerHTML += `${event.data}<br>`;
+            };
+
+            eventSource.onerror = function(error) {
+                console.error("SSE error:", error);
+                eventSource.close();
+            };
+        }
+
+        // Execute the function to send initial data on script load
+        sendInitialData();
+    </script>
+</body>
+</html>

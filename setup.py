@@ -23,7 +23,8 @@ setup(name=PROJECT_NAME,
           'python-crontab==2.6.0',
           'setuptools~=65.5.0',
           'crontab~=0.23.0',
-          'pytz'
+          'pytz',
+          'sseclient'
       ],
       zip_safe=False
       )
