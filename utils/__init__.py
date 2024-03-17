@@ -6,7 +6,7 @@ import pytz
 from datetime import datetime, time
 USERNAME = getpass.getuser()
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+import uuid
 
 def abspath(*path):
     """
@@ -37,6 +37,13 @@ def get_today_midnight():
 def chunk_list(l, chunk_size):
     chunked_list = [l[i:i + chunk_size] for i in range(0, len(l), chunk_size)]
     return chunked_list
+
+def generate_uuid_id():
+    # 生成一个UUID
+    unique_id = uuid.uuid4()
+    # 将UUID转换为字符串，并取前10个字符
+    short_id = str(unique_id)[:12]
+    return short_id
 
 
 if __name__ == "__main__":

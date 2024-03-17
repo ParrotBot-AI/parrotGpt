@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, Request
 from blueprints.openaicall.models import (
     Speak,
     Essay,
@@ -10,6 +10,7 @@ from configs import (
     SPEECHSUPER_APPKEY,
     SPEECHSUPER_SECRETKEY
 )
+from fastapi.responses import StreamingResponse
 import openai
 from blueprints.openaicall.prompts import *
 from nltk.tokenize import sent_tokenize
@@ -21,6 +22,7 @@ import requests
 import urllib.request as urllib2
 from blueprints.openaicall.controller import OpenAIController
 from utils.response_tools import (SuccessDataResponse, ArgumentExceptionResponse)
+from utils import generate_uuid_id
 
 openai.api_key = OPEN_AI_API_KEY
 appKey = SPEECHSUPER_APPKEY
@@ -30,6 +32,8 @@ router = APIRouter(
     prefix="/v1/modelapi",
     tags=["openaicall"]
 )
+
+global_state = {}
 
 # ================================== Tofel Study ===========================#
 @router.post("/writing/gradeWriting/")
@@ -264,7 +268,7 @@ async def gradeSpeaking(speak: Speak):
 
 
 # ================================== AI Assistant (streaming) ===========================#
-@router.post("/assistantChatbot/")
+@router.post("/assistantChatbot_old/")
 async def chatbotRespond(chatbotMessage: ChatbotMessage):
     sys_prompt = ASSISTANT_CHATBOT_SYSPROMPT
     user_prompt = chatbotMessage.chatbotQuery
@@ -280,6 +284,34 @@ async def chatbotRespond(chatbotMessage: ChatbotMessage):
         temperature=0
     )
     return OpenAIController().censorOutput({"response": response.choices[0].message.content})
+@router.post("/assistantChatbot/chat/")
+async def setup_endpoint(request: Request):
+    data = await request.json()
+    _uuid = generate_uuid_id()
+    global_state[_uuid] = data
+    return SuccessDataResponse(data={"message": "message received", "clientId": _uuid})
+
+@router.get('/assistantChatbot/{client_id}/', status_code=200)
+async def chatbotRespond(client_id: str):
+    if client_id not in global_state:
+        return ArgumentExceptionResponse(msg='ID not found')
+
+    sys_prompt = ASSISTANT_CHATBOT_SYSPROMPT
+    data_input = global_state.get(client_id, {})
+    del global_state[client_id]
+    user_prompt = data_input["chatbotQuery"]
+    model = "gpt-3.5-turbo-0125"
+    token_size = 1024
+    temp = 0
+    return StreamingResponse(OpenAIController().OpenAiStreaming(
+        sys_prompt=sys_prompt,
+        user_prompt=user_prompt,
+        model=model,
+        token_size=token_size,
+        temp=temp
+    ), media_type="text/event-stream")
+    # Start the OpenAI stream in a background thread
+
 
 # ================================== Vocal Learning (streaming) ===========================#
 """
