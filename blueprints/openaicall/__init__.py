@@ -286,7 +286,6 @@ async def chatbotRespond(client_id: str):
     data_input = global_state.get(client_id, {})
     del global_state[client_id]
     user_prompt = data_input["chatbotQuery"]
-    print(user_prompt)
     model = "gpt-3.5-turbo-0125"
     token_size = 1024
     temp = 0

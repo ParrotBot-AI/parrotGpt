@@ -4,20 +4,24 @@ import requests
 from sseclient import SSEClient
 
 # Update with the FastAPI SSE endpoint URL
-sse_url = 'http://0.0.0.0:8000/v1/modelapi/assistantChatbot/'
 
-def listen_to_sse(url):
+
+def listen_to_sse():
     try:
-        headers = {'Accept': 'text/event-stream'}
+        url = 'http://0.0.0.0:8000/v1/modelapi/assistantChatbot/chat/'
         response = requests.post(url,
-                json={
-                    "queryType": "a",
-                    "chatbotQuery": "Write me a poem about the TOEFL exam",
-                    "passage": "a",
-                    "mcq": "a",
-                },
-                stream=True,
-                headers=headers)
+                                 json={
+                                    "queryType": "a",
+                                     "chatbotQuery": "什么是托福？",
+                                     "passage": "a",
+                                     "mcq": "a",
+                                 })
+        if response.json()['code'] == 10000:
+            cliend_id = response.json()['data']['clientId']
+        headers = {'Accept': 'text/event-stream'}
+
+        sse_url = f'http://0.0.0.0:8000/v1/modelapi/assistantChatbot/{cliend_id}'
+        response = requests.get(sse_url,stream=True,headers=headers)
         if response.status_code == 200:
             for line in response.iter_lines(decode_unicode=True):
                 if line.startswith('data:'):
@@ -31,4 +35,4 @@ def listen_to_sse(url):
 
 
 if __name__ == "__main__":
-    listen_to_sse(sse_url)
+    listen_to_sse()
