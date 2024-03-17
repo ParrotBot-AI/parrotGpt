@@ -103,3 +103,115 @@ class OpenAIController():
           break
 
     return event_generator()
+
+  def OpenAiVocabStreaming(
+          self,
+          model,
+          sys_prompt,
+          token_size,
+          temp,
+          vocabs: dict
+  ):
+    def generate_stream(queue):
+      try:
+
+        finish = False
+        client = OpenAI(api_key=OPEN_AI_API_KEY)
+
+        # init generate
+        user_prompt = "Vocabulary List\n"
+        for k, v in vocabs.items():
+          user_prompt += k + " - " + v + "\n"
+
+        words_c = vocabs.copy()
+        res_txt = ''
+        response = client.chat.completions.create(
+          model=model,
+          messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+          ],
+          temperature=temp,
+          max_tokens=token_size,
+          stream=True
+        )
+        for chunk in response:
+          if chunk.choices[0].delta.content != None:
+            data = chunk.choices[0].delta.content
+            queue.put(f"data: {data}\n")
+            res_txt += data
+          else:
+            break
+
+        word_miss = {}
+        for k, v in words_c.items():
+          if k.lower() not in res_txt.lower() or v.lower() not in res_txt.lower():
+            word_miss[k] = v
+        words_c = word_miss.copy()
+
+        if len(list(word_miss.keys())) > 0:
+          user_prompt = "Vocabulary List\n"
+          for k, v in word_miss.items():
+            user_prompt += k + " - " + v + "\n"
+        else:
+          finish = True
+
+        TRY_TIME = 2
+        count = 0
+        print(res_txt)
+
+        # generate for 2 more times
+        while count < TRY_TIME and not finish:
+          word_miss = {}
+          res_txt = ''
+
+          response = client.chat.completions.create(
+            model=model,
+            messages=[
+              {"role": "system", "content": sys_prompt},
+              {"role": "user", "content": user_prompt}
+            ],
+            temperature=temp,
+            max_tokens=token_size,
+            stream=True
+          )
+          for chunk in response:
+            if chunk.choices[0].delta.content != None:
+              data = chunk.choices[0].delta.content
+              queue.put(f"data: {data}\n")
+              res_txt += data
+            else:
+              break
+          print(res_txt)
+
+          for k, v in words_c.items():
+            if k.lower() not in res_txt.lower() or v.lower() not in res_txt.lower():
+              word_miss[k] = v
+          words_c = word_miss.copy()
+
+          if len(list(word_miss.keys())) > 0:
+            user_prompt = "Vocabulary List\n"
+            for k, v in word_miss.items():
+              user_prompt += k + " - " + v + "\n"
+            count += 1
+          else:
+            finish = True
+
+        queue.put(f"data: [DONE!]")
+
+      finally:
+        queue.put(None)  # Signal that streaming is done
+
+    queue = Queue()
+    Thread(target=generate_stream, args=(queue,), daemon=True).start()
+    async def event_generator():
+      while True:
+        try:
+          data = queue.get(timeout=20)  # Adjust timeout as necessary
+          if data is None:
+            break
+          yield data
+        except Empty:
+          break
+
+    return event_generator()

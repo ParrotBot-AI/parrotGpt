@@ -375,3 +375,5 @@ Output your response in a JSON as follows:
 }
 , where "\n" is used to indicate a paragraph break.
 '''
+
+VOCAB_PASSAGE_GEN_TEST = """You are a vocabulary teacher for Chinese students learning English. To facilitate this task, you will generate one short passage in Chinese about architecture. However, in this passage, you will use English vocabulary words from a given list in the exact form they are given, and you must include the Chinese definition and then the corresponding English definition in English in parenthesis. You must use every vocab word, and do not add any extra English words. Title the passage with your topic. There should be longer, but a fewer amount, of paragraphs.\n\nA sentence should look like the following: 我hate(恨 - to strongly dislike)他。where \"hate\" is the vocab word and \"to strongly dislike\" is the given definition."""

@@ -35,6 +35,7 @@ router = APIRouter(
 
 global_state = {}
 
+
 # ================================== Tofel Study ===========================#
 @router.post("/writing/gradeWriting/")
 async def gradeWriting(essay: Essay):
@@ -78,12 +79,12 @@ async def gradeWriting(essay: Essay):
         for k, v in data["Grades"].items():
             sum += int(v)
         if essay.gradeType == "Academic Discussion":
-            d["Overall"] = str(sum/4)
+            d["Overall"] = str(sum / 4)
         elif essay.gradeType == "Integrated Writing":
-            d["Overall"] = str(math.floor(sum*4/3)/4)
+            d["Overall"] = str(math.floor(sum * 4 / 3) / 4)
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
-    
+
     d.update(data)
     print(d)
     # Send Feedback Request
@@ -178,6 +179,7 @@ async def gradeWriting(essay: Essay):
     else:
         return ArgumentExceptionResponse(msg=data)
 
+
 @router.post("/speaking/gradeSpeaking/")
 async def gradeSpeaking(speak: Speak):
     d = {}
@@ -258,8 +260,9 @@ async def gradeSpeaking(speak: Speak):
         grades["Grammar"] = str(speech_res["result"]["grammar"] // 2)
         grades["Vocabulary Usage"] = str(speech_res["result"]["lexical_resource"] // 2)
         grades["Fluency"] = str(speech_res["result"]["fluency_coherence"] // 2)
-        tot = math.ceil(int(grades["Content"]) + int(grades["Coherence"]) + ((int(grades["Grammar"]) + int(grades["Vocabulary Usage"]))/2) + int(grades["Fluency"]))
-        avg = math.floor(tot/2)/2
+        tot = math.ceil(int(grades["Content"]) + int(grades["Coherence"]) + (
+                (int(grades["Grammar"]) + int(grades["Vocabulary Usage"])) / 2) + int(grades["Fluency"]))
+        avg = math.floor(tot / 2) / 2
         d["Overall"] = str(avg)
         d.update({"Grades": grades})
         return SuccessDataResponse(data=d)
@@ -284,12 +287,15 @@ async def chatbotRespond(chatbotMessage: ChatbotMessage):
         temperature=0
     )
     return OpenAIController().censorOutput({"response": response.choices[0].message.content})
-@router.post("/assistantChatbot/chat/")
+
+
+@router.post("/streaming/")
 async def setup_endpoint(request: Request):
     data = await request.json()
     _uuid = generate_uuid_id()
     global_state[_uuid] = data
     return SuccessDataResponse(data={"message": "message received", "clientId": _uuid})
+
 
 @router.get('/assistantChatbot/{client_id}/', status_code=200)
 async def chatbotRespond(client_id: str):
@@ -303,14 +309,35 @@ async def chatbotRespond(client_id: str):
     model = "gpt-3.5-turbo-0125"
     token_size = 1024
     temp = 0
-    return StreamingResponse(OpenAIController().OpenAiStreaming(
+    response = StreamingResponse(OpenAIController().OpenAiStreaming(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
         model=model,
         token_size=token_size,
         temp=temp
     ), media_type="text/event-stream")
+    return response
     # Start the OpenAI stream in a background thread
+
+
+@router.get("/getVocabContent/{client_id}/", status_code=200)
+async def getVocabContent(client_id: str):
+    if client_id not in global_state:
+        return ArgumentExceptionResponse(msg='ID not found')
+
+    data_input = global_state.get(client_id, {})
+    del global_state[client_id]
+    sys_prompt = VOCAB_PASSAGE_GEN_TEST
+    model = "gpt-4-0125-preview"
+    token_size = 4096
+    temp = 0.75
+    return StreamingResponse(OpenAIController().OpenAiVocabStreaming(
+        sys_prompt=sys_prompt,
+        model=model,
+        token_size=token_size,
+        temp=temp,
+        vocabs=data_input
+    ), media_type="text/event-stream")
 
 
 # ================================== Vocal Learning (streaming) ===========================#
