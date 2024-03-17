@@ -13,6 +13,7 @@ from configs import (
 import openai
 from blueprints.openaicall.prompts import *
 from nltk.tokenize import sent_tokenize
+import math
 import json
 import time
 import hashlib
@@ -68,9 +69,19 @@ async def gradeWriting(essay: Essay):
     )
     if not res:
         return ArgumentExceptionResponse(msg=data)
-
+    try:
+        sum = 0
+        for k, v in data["Grades"].items():
+            sum += int(v)
+        if essay.gradeType == "Academic Discussion":
+            d["Overall"] = str(sum/4)
+        elif essay.gradeType == "Integrated Writing":
+            d["Overall"] = str(math.floor(sum*4/3)/4)
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+    
     d.update(data)
-
+    print(d)
     # Send Feedback Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_FEEDBACK_SYSPROMPT
@@ -243,6 +254,9 @@ async def gradeSpeaking(speak: Speak):
         grades["Grammar"] = str(speech_res["result"]["grammar"] // 2)
         grades["Vocabulary Usage"] = str(speech_res["result"]["lexical_resource"] // 2)
         grades["Fluency"] = str(speech_res["result"]["fluency_coherence"] // 2)
+        tot = math.ceil(int(grades["Content"]) + int(grades["Coherence"]) + ((int(grades["Grammar"]) + int(grades["Vocabulary Usage"]))/2) + int(grades["Fluency"]))
+        avg = math.floor(tot/2)/2
+        d["Overall"] = str(avg)
         d.update({"Grades": grades})
         return SuccessDataResponse(data=d)
     except Exception as e:
@@ -252,7 +266,7 @@ async def gradeSpeaking(speak: Speak):
 # ================================== AI Assistant (streaming) ===========================#
 @router.post("/assistantChatbot/")
 async def chatbotRespond(chatbotMessage: ChatbotMessage):
-    sys_prompt = prompts.ASSISTANT_CHATBOT_SYSPROMPT
+    sys_prompt = ASSISTANT_CHATBOT_SYSPROMPT
     user_prompt = chatbotMessage.chatbotQuery
 
     # Make a request to the OpenAI API

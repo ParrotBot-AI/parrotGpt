@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-# ================================== Tofel Study ===========================#
+# ================================== Toefl Study ===========================#
 class Essay(BaseModel):
     prompt: str
     content: str
