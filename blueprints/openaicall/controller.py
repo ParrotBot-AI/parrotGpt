@@ -119,6 +119,7 @@ class OpenAIController():
         client = OpenAI(api_key=OPEN_AI_API_KEY)
 
         # init generate
+        sys_prompt=VOCAB_PASSAGE_GEN
         user_prompt = "Vocabulary List\n"
         for k, v in vocabs.items():
           user_prompt += k + " - " + v + "\n"
@@ -153,18 +154,20 @@ class OpenAIController():
           user_prompt = "Vocabulary List\n"
           for k, v in word_miss.items():
             user_prompt += k + " - " + v + "\n"
+          user_prompt += "\n" + res_txt
         else:
           finish = True
 
         TRY_TIME = 2
         count = 0
-        print(res_txt)
 
+        total_txt = res_txt + "\n"
+        sys_prompt = VOCAB_PASSAGE_FOLLOWUP_GEN
         # generate for 2 more times
         while count < TRY_TIME and not finish:
+          print(count)
           word_miss = {}
           res_txt = ''
-
           response = client.chat.completions.create(
             model=model,
             messages=[
@@ -180,10 +183,9 @@ class OpenAIController():
               data = chunk.choices[0].delta.content
               queue.put(f"data: {data}\n")
               res_txt += data
+              total_txt += data
             else:
               break
-          print(res_txt)
-
           for k, v in words_c.items():
             if k.lower() not in res_txt.lower() or v.lower() not in res_txt.lower():
               word_miss[k] = v
@@ -193,12 +195,13 @@ class OpenAIController():
             user_prompt = "Vocabulary List\n"
             for k, v in word_miss.items():
               user_prompt += k + " - " + v + "\n"
+            user_prompt += total_txt
             count += 1
           else:
             finish = True
 
         queue.put(f"data: [DONE!]")
-
+        print("TOTAL: ", total_txt)
       finally:
         queue.put(None)  # Signal that streaming is done
 
