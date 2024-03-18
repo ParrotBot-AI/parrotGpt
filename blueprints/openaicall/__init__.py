@@ -36,7 +36,7 @@ router = APIRouter(
 global_state = {}
 
 
-# ================================== Tofel Study ===========================#
+# ================================== Toefl Study ===========================#
 @router.post("/writing/gradeWriting/")
 async def gradeWriting(essay: Essay):
     d = {}
@@ -161,7 +161,7 @@ async def gradeWriting(essay: Essay):
 
     user_prompt = json.dumps(content, indent=4)
 
-    # get editing
+    # get mindmap
     res, mindmap = OpenAIController().GeneralOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -178,7 +178,6 @@ async def gradeWriting(essay: Essay):
         return SuccessDataResponse(data=data)
     else:
         return ArgumentExceptionResponse(msg=data)
-
 
 @router.post("/speaking/gradeSpeaking/")
 async def gradeSpeaking(speak: Speak):
@@ -237,20 +236,28 @@ async def gradeSpeaking(speak: Speak):
     res = requests.post(url, data=data, headers=headers, files=files)
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
 
+    try:
+        student_transcript = {}
+        for i in range(len(speech_res["result"]["sentences"])):
+            student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
+        d.update({"Content": student_transcript})
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+
     # GPT Grading
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_GRADING_SYSPROMPT
-    elif speak.gradeType == "Integrated Writing":
-        sys_prompt = INTEGRATED_WRITING_GRADING_SYSPROMPT
+    elif speak.gradeType == "Integrated Speaking":
+        sys_prompt = INTEGRATED_SPEAKING_GRADING_SYSPROMPT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
     user_prompt = "Prompt: " + speak.prompt + "\n\nStudent Transcript: " + speech_res["result"]["transcription"]
-
+    print(255, user_prompt)
     res, data = OpenAIController().GeneralOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
         model="gpt-4-0125-preview",
-        token_size=512,
+        token_size=4096,
         temp=1
     )
     if not res:
@@ -260,20 +267,64 @@ async def gradeSpeaking(speak: Speak):
         grades["Grammar"] = str(speech_res["result"]["grammar"] // 2)
         grades["Vocabulary Usage"] = str(speech_res["result"]["lexical_resource"] // 2)
         grades["Fluency"] = str(speech_res["result"]["fluency_coherence"] // 2)
+        grades["Pronunciation"] = str(speech_res["result"]["pronunciation"] // 2)
         tot = math.ceil(int(grades["Content"]) + int(grades["Coherence"]) + (
-                (int(grades["Grammar"]) + int(grades["Vocabulary Usage"])) / 2) + int(grades["Fluency"]))
+                (int(grades["Grammar"]) + int(grades["Vocabulary Usage"])) / 2) + (int(grades["Fluency"]) + int(grades["Pronunciation"])) / 2)
         avg = math.floor(tot / 2) / 2
         d["Overall"] = str(avg)
         d.update({"Grades": grades})
-        return SuccessDataResponse(data=d)
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+    
+    # Send Feedback Request
+    try:
+        if speak.gradeType == "Independent Speaking":
+            sys_prompt = INDEPENDENT_SPEAKING_FEEDBACK_SYSPROMPT
+        elif speak.gradeType == "Integrated Speaking":
+            sys_prompt = INTEGRATED_SPEAKING_FEEDBACK_SYSPROMPT
+        else:
+            return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+        user_prompt = "Prompt:\n" + speak.prompt + "\nStudent Transcript:\n" + json.dumps(student_transcript, indent=4) + "\nScore:\n"
+        user_prompt += "Content: " + grades["Content"] + "\nCoherence: " + grades["Coherence"] + "\nGrammar and Language Use: " + str((int(grades["Grammar"]) + int(grades["Vocabulary Usage"]))/2) + "\nDelivery: " + str((int(grades["Fluency"]) + int(grades["Pronunciation"]))/2)
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e)) 
+    res, feedback = OpenAIController().GeneralOpenAICall(
+        sys_prompt=sys_prompt,
+        user_prompt=user_prompt,
+        model="gpt-4-0125-preview",
+        token_size=4096,
+        temp=1
+    )
+    if not res:
+        return ArgumentExceptionResponse(msg=feedback)
+    try:
+        gen_feedback = ""
+        for k, v in feedback["General Feedback"].items():
+            gen_feedback += k + ": " + v + "\n"
+        d.update({"General Feedback": gen_feedback})
+        d.update({"Sentence Feedback": feedback["Sentence Feedback"]})
+        word_pronunciation = {}
+        pronunciation = {}
+        for s in speech_res["result"]["sentences"]:
+            for w in s["details"]:
+                if w["word"] not in word_pronunciation.keys():
+                    word_pronunciation[w["word"]] = [w["pronunciation"]]
+                else:
+                    word_pronunciation[w["word"]].append(w["pronunciation"])
+        for k, v in word_pronunciation.items():
+            if math.floor(sum(v)/len(v)) < 60:
+                pronunciation[k] = math.floor(sum(v)/len(v))
+        d.update({"Bad Pronunciation Scores": pronunciation})
+
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
+    return SuccessDataResponse(data=d)
 
 # ================================== AI Assistant (streaming) ===========================#
 @router.post("/assistantChatbot_old/")
 async def chatbotRespond(chatbotMessage: ChatbotMessage):
-    sys_prompt = ASSISTANT_CHATBOT_SYSPROMPT
+    sys_prompt = OLD_ASSISTANT_CHATBOT_SYSPROMPT
     user_prompt = chatbotMessage.chatbotQuery
 
     # Make a request to the OpenAI API
@@ -301,13 +352,65 @@ async def setup_endpoint(request: Request):
 async def chatbotRespond(client_id: str):
     if client_id not in global_state:
         return ArgumentExceptionResponse(msg='ID not found')
-
-    sys_prompt = ASSISTANT_CHATBOT_SYSPROMPT
+    
     data_input = global_state.get(client_id, {})
-    del global_state[client_id]
-    user_prompt = data_input["chatbotQuery"]
-    model = "gpt-3.5-turbo-0125"
-    token_size = 1024
+    del global_state[client_id] 
+
+    user_prompt = data_input["Main Content"] + "\n"
+    match data_input["toeflType"]:
+        case "Reading":
+            match data_input["queryType"]:
+                case "其他问题":
+                    sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                    user_prompt += data_input["chatbotQuery"]
+                case "错题解析":
+                    sys_prompt = CHATBOT_错题解析_SYSPROMPT
+                    user_prompt += data_input["mcq"]
+                case "解题思路":
+                    sys_prompt = CHATBOT_解题思路_SYSPROMPT
+                    user_prompt += data_input["mcq"] + "\n" + data_input["problemMethod"]
+                case "重点信息":
+                    sys_prompt = CHATBOT_重点信息_SYSPROMPT
+                    user_prompt += data_input["mcq"]
+                case "段落逻辑":
+                    sys_prompt = CHATBOT_MINDMAP_SYSPROMPT
+                case _:
+                    return ArgumentExceptionResponse(msg='Invalid queryType')
+        case "Listening":
+            match data_input["queryType"]:
+                case "其他问题":
+                    sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                    user_prompt += data_input["chatbotQuery"]
+                case "错题解析":
+                    sys_prompt = CHATBOT_错题解析_SYSPROMPT
+                    user_prompt += data_input["mcq"]
+                case "解题思路":
+                    sys_prompt = CHATBOT_解题思路_SYSPROMPT
+                    user_prompt += data_input["mcq"] + "\n" + data_input["problemMethod"]
+                case "重点信息":
+                    sys_prompt = CHATBOT_重点信息_SYSPROMPT
+                    user_prompt += data_input["mcq"]
+                case "听力逻辑":
+                    sys_prompt = CHATBOT_MINDMAP_SYSPROMPT
+                case _:
+                    return ArgumentExceptionResponse(msg='Invalid queryType')
+        case "Speaking":
+            if data_input["queryType"] == "其他问题":
+                sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                user_prompt += data_input["chatbotQuery"]
+            else:
+                return ArgumentExceptionResponse(msg='Invalid queryType')
+        case "Writing":
+            if data_input["queryType"] == "其他问题":
+                sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                user_prompt += data_input["chatbotQuery"]
+            else:
+                return ArgumentExceptionResponse(msg='Invalid queryType')
+        case _:
+            return ArgumentExceptionResponse(msg='Invalid toeflType')
+        
+    model = "gpt-4-0125-preview"
+    token_size = 512
     temp = 0
     response = StreamingResponse(OpenAIController().OpenAiStreaming(
         sys_prompt=sys_prompt,
@@ -319,7 +422,7 @@ async def chatbotRespond(client_id: str):
     return response
     # Start the OpenAI stream in a background thread
 
-
+# ================================== Vocab Learning (streaming) ===========================#
 @router.get("/getVocabContent/{client_id}/", status_code=200)
 async def getVocabContent(client_id: str):
     if client_id not in global_state:
@@ -327,7 +430,7 @@ async def getVocabContent(client_id: str):
 
     data_input = global_state.get(client_id, {})
     del global_state[client_id]
-    sys_prompt = VOCAB_PASSAGE_GEN_TEST
+    sys_prompt = VOCAB_PASSAGE_GEN
     model = "gpt-4-0125-preview"
     token_size = 4096
     temp = 0.75
@@ -338,75 +441,6 @@ async def getVocabContent(client_id: str):
         temp=temp,
         vocabs=data_input
     ), media_type="text/event-stream")
-
-
-# ================================== Vocal Learning (streaming) ===========================#
-"""
-@router.post("/reading/getVocabContent/")
-async def getVocabContent(vocablist: VocabList):
-  d = {}
-
-  start = time.time()
-  counter = 1
-  while(counter <= 3):
-    sys_prompt = prompts.VOCAB_PASSAGE_GEN
-    user_prompt = "Vocabulary List\n"
-    for k, v in vocablist.vocab.items():
-      user_prompt += k + " - "+ v + "\n"
-
-    #Generate the vocabulary passage in English
-    response = openai.chat.completions.create(
-      model="gpt-4-0125-preview",
-      messages=[
-        {"role": "system", "content": sys_prompt},
-        {"role": "user", "content": user_prompt}
-      ],
-      max_tokens=4096,
-      temperature=0.75,
-      response_format={"type": "json_object"}
-    )
-    passage = json.loads(response.choices[0].message.content)
-    vocab_used = passage["Vocab Words Used"]
-
-    #Correspond each vocabulary word to a sentence
-    vocab_words = {}
-    for word in vocablist.vocab.keys():  
-      for k, v in vocab_used.items():
-        if word.lower() in [x.lower() for x in v]:
-          vocab_words[word] = passage["Sentences"][k]
-          break
-    if len(vocab_words) == 20:
-      break
-    else:
-      counter += 1
-      print(counter)
-      print(len(vocab_words))
-
-  if counter > 3:
-     return {"Status": "Error"}
-  d.update({"Vocab Sentences": vocab_words})
-
-  print(time.time()-start)
-  #Translate the passage into Chinese minus the vocabulary words
-  sys_prompt = prompts.VOCAB_TRANSLATION_GEN
-  user_prompt += "\n" + json.dumps({"Title": passage["Title"], "Sentences": passage["Sentences"]}, indent=4)
-  response = openai.chat.completions.create(
-    model="gpt-4-0125-preview",
-    messages=[
-      {"role": "system", "content": sys_prompt},
-      {"role": "user", "content": user_prompt}
-    ],
-    max_tokens=4096,
-    temperature=0.75,
-    response_format={"type": "json_object"}
-  )
-  passage = json.loads(response.choices[0].message.content)
-  d.update(passage)
-  d.update({"Status": "OK"})
-
-  return censorOutput(d)
-"""
-
 
 @router.post("/test/")
 async def heartbeat():

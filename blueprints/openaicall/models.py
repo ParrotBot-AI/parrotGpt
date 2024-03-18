@@ -21,7 +21,9 @@ class VocabList(BaseModel):
 
 # ================================== AI Assistant ===========================#
 class ChatbotMessage(BaseModel):
+    toeflType: str
     queryType: str
     chatbotQuery: str
-    passage: str
+    mainContent: str
     mcq: str
+    problemMethod: str
