@@ -86,7 +86,6 @@ async def gradeWriting(essay: Essay):
         return ArgumentExceptionResponse(msg=str(e))
 
     d.update(data)
-    print(d)
     # Send Feedback Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_FEEDBACK_SYSPROMPT
@@ -252,7 +251,6 @@ async def gradeSpeaking(speak: Speak):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
     user_prompt = "Prompt: " + speak.prompt + "\n\nStudent Transcript: " + speech_res["result"]["transcription"]
-    print(255, user_prompt)
     res, data = OpenAIController().GeneralOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -313,13 +311,17 @@ async def gradeSpeaking(speak: Speak):
                     word_pronunciation[w["word"]].append(w["pronunciation"])
         for k, v in word_pronunciation.items():
             if math.floor(sum(v)/len(v)) < 60:
-                pronunciation[k] = math.floor(sum(v)/len(v))
+                pronunciation[k] = str(math.floor(sum(v)/len(v)))
         d.update({"Bad Pronunciation Scores": pronunciation})
 
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
-    return SuccessDataResponse(data=d)
+    res, data = OpenAIController().censorOutput(d)
+    if res:
+        return SuccessDataResponse(data=data)
+    else:
+        return ArgumentExceptionResponse(msg=data)
 
 # ================================== AI Assistant (streaming) ===========================#
 @router.post("/assistantChatbot_old/")
