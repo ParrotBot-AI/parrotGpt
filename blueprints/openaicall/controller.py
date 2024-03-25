@@ -16,7 +16,6 @@ class OpenAIController():
           temp
   ):
     try:
-      # Send Grading Request
       response = openai.chat.completions.create(
         model=model,
         messages=[
@@ -28,6 +27,37 @@ class OpenAIController():
         response_format={"type": "json_object"}
       )
       data = json.loads(response.choices[0].message.content)
+      return True, data
+    except Exception as e:
+      return False, f"{str(e)}"
+    
+  def FormatOpenAICall(
+          self,
+          sys_prompt,
+          user_prompt,
+          model,
+          token_size,
+          temp,
+          format
+  ):
+    try:
+      response = openai.chat.completions.create(
+        model=model,
+        messages=[
+          {"role": "system", "content": sys_prompt},
+          {"role": "user", "content": user_prompt}
+        ],
+        max_tokens=token_size,
+        temperature=temp,
+        functions=format,
+        function_call = 'auto'
+      )
+      if response.choices[0].finish_reason == 'function_call':
+        data = json.loads(response.choices[0].message.function_call.arguments)
+      elif response.choices[0].finish_reason == 'stop':
+        data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
+      else:
+        return False, "OPENAI FUNCTION CALLING ERROR"
       return True, data
     except Exception as e:
       return False, f"{str(e)}"
@@ -107,19 +137,17 @@ class OpenAIController():
   def OpenAiVocabStreaming(
           self,
           model,
-          sys_prompt,
           token_size,
           temp,
-          vocabs: dict
+          vocabs: dict,
   ):
     def generate_stream(queue):
       try:
-
         finish = False
         client = OpenAI(api_key=OPEN_AI_API_KEY)
 
         # init generate
-        sys_prompt=VOCAB_PASSAGE_GEN
+        sys_prompt=VOCAB_PASSAGE_GEN.format(numVocab = len(vocabs))
         user_prompt = "Vocabulary List\n"
         for k, v in vocabs.items():
           user_prompt += k + " - " + v + "\n"
@@ -162,10 +190,9 @@ class OpenAIController():
         count = 0
 
         total_txt = res_txt + "\n"
-        sys_prompt = VOCAB_PASSAGE_FOLLOWUP_GEN
+        sys_prompt = VOCAB_PASSAGE_FOLLOWUP_GEN.format(numVocab = len(word_miss))
         # generate for 2 more times
         while count < TRY_TIME and not finish:
-          print(count)
           word_miss = {}
           res_txt = ''
           response = client.chat.completions.create(
@@ -199,7 +226,6 @@ class OpenAIController():
             count += 1
           else:
             finish = True
-
         queue.put(f"data: [DONE!]")
         # print("TOTAL: ", total_txt)
       finally:
