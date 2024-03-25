@@ -10,6 +10,8 @@ from configs import (
     SPEECHSUPER_APPKEY,
     SPEECHSUPER_SECRETKEY
 )
+# import nltk
+# nltk.download('punkt')
 from fastapi.responses import StreamingResponse
 import openai
 from blueprints.openaicall.prompts import *

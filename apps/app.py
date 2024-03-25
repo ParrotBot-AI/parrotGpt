@@ -5,8 +5,6 @@ import asyncio
 
 def create_app():
     app = FastAPI()
-
-    # Configuration - Example using environment variables or direct settings
     app.config = {
         "SECRET_KEY": "prod",
         "JSON_AS_ASCII": False
