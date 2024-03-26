@@ -116,8 +116,8 @@ class OpenAIController():
                         data = chunk.choices[0].delta.content
                         queue.put(f"data: {data}\n")
                     else:
-                        queue.put(f"data: [DONE!]")
                         break  # Exit if no content
+                queue.put(f"data: [DONE!]")
             finally:
                 queue.put(None)  # Signal that streaming is done
 
@@ -128,6 +128,7 @@ class OpenAIController():
             while True:
                 try:
                     data = queue.get(timeout=20)  # Adjust timeout as necessary
+                    print(131, data)
                     if data is None:
                         break
                     yield data
