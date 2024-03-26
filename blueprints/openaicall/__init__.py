@@ -379,9 +379,9 @@ async def chatbotRespond(client_id: str):
     data_input = global_state.get(client_id, {})
     del global_state[client_id] 
 
-    user_prompt = data_input["Main Content"] + "\n"
     match data_input["toeflType"]:
         case "Reading":
+            user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
                     sys_prompt = CHATBOT_其他问题_SYSPROMPT
@@ -400,6 +400,7 @@ async def chatbotRespond(client_id: str):
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Listening":
+            user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
                     sys_prompt = CHATBOT_其他问题_SYSPROMPT
@@ -418,22 +419,27 @@ async def chatbotRespond(client_id: str):
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Speaking":
+            user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
                 sys_prompt = CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Writing":
+            user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
                 sys_prompt = CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
+        case "Misc":
+            sys_prompt = CHATBOT_MISC_SYSPROMPT
+            user_prompt = data_input["chatbotQuery"]
         case _:
             return ArgumentExceptionResponse(msg='Invalid toeflType')
         
     model = "gpt-4-0125-preview"
-    token_size = 512
+    token_size = 1024
     temp = 0
     response = StreamingResponse(OpenAIController().OpenAiStreaming(
         sys_prompt=sys_prompt,
