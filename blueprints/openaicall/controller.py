@@ -128,7 +128,6 @@ class OpenAIController():
             while True:
                 try:
                     data = queue.get(timeout=20)  # Adjust timeout as necessary
-                    print(131, data)
                     if data is None:
                         break
                     yield data
@@ -244,7 +243,6 @@ class OpenAIController():
             while True:
                 try:
                     data = queue.get(timeout=20)  # Adjust timeout as necessary
-                    print(246, data)
                     if data is None:
                         break
                     yield data
