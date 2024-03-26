@@ -55,7 +55,7 @@ ACADEMIC_DISCUSSION_GRADING_FORMAT = [{"name":"Academic_Discussion_Grading_Forma
 									   }
 									}]
 ACADEMIC_DISCUSSION_FEEDBACK_SYSPROMPT = '''
-You are a teacher who is reviewing students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. The student's paragraph was been segmented into numbered sentences, in order of their appearance in the paragraph. The student's scores have been returned to you. Based on these scores given according to the rubric below,  first provide some general feedback for the student to improve their essay, touching on the contribution, relevance, grammar, and structure/flow according to the rubric. Then, provide sentence feedback by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or negative feedback.
+You are a teacher who is reviewing students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. The student's paragraph was been segmented into numbered sentences, in order of their appearance in the paragraph. The student's scores have been returned to you. Based on these scores given according to the rubric below,  first provide some general feedback for the student to improve their essay, touching on the contribution, relevance, grammar, and structure/flow according to the rubric. Then, provide sentence feedback for contribution, relevance, grammar, and structure/flow by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or constructive feedback. After, if the sentence is constructive feedback, label each sentence's feedback with a keyword depending on which rubric category the feedback falls under. The possible keywords are: "Contribution", "Relevance", "Grammar", "Structure/Flow". If the sentence is positive feedback, then use the keyword "Good".
 
 Contribution
 5: Includes the student's own perspective on the topic and thoroughly explains this perspective
@@ -106,8 +106,9 @@ ACADEMIC_DISCUSSION_FEEDBACK_FORMAT = [{"name":"Academic_Discussion_Feedback_For
                                                    "items": {
                                                        "type": "object",
                                                        "properties": {
-                                                           "sentence": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"}
-													   }
+                                                            "feedback": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"},
+                                                            "feedbackType": {"enum": ["Contribution", "Relevance", "Grammar", "Structure/Flow", "Good"]}
+                                                       }
 												   }
 											   }
 										   }
@@ -228,7 +229,7 @@ INTEGRATED_WRITING_GRADING_FORMAT = [{"name":"Integrated_Writing_Grading_Format"
 									   }
 									}]
 INTEGRATED_WRITING_FEEDBACK_SYSPROMPT='''
-You are a teacher who is reviewing students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. The student's paragraph was been segmented into numbered sentences, in order of their appearance in the paragraph. The student's scores have been returned to you. Based on these scores given according to the rubric below,  first provide some general feedback for the student to improve their essay, touching on the content & details given, grammar, and stucture/flow according to the rubric. TThen, provide sentence feedback by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or negative feedback.
+You are a teacher who is reviewing students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. The student's paragraph was been segmented into numbered sentences, in order of their appearance in the paragraph. The student's scores have been returned to you. Based on these scores given according to the rubric below,  first provide some general feedback for the student to improve their essay, touching on the content & details given, grammar, and stucture/flow according to the rubric. Then, provide sentence feedback for content & details given, grammar, and stucture/flow by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or constructive feedback. After, if the sentence is constructive feedback, label each sentence's feedback with a keyword depending on which rubric category the feedback falls under. The possible keywords are: "Content & Details Given", "Grammar", "Structure/Flow". If the sentence is positive feedback, then use the keyword "Good".
 
 Content & Details Given
 5: Response contains main ideas from both mediums, most details, and connects the two accurately while utilizing many keywords used in the passage and audio clip.
@@ -271,8 +272,9 @@ INTEGRATED_WRITING_FEEDBACK_FORMAT = [{"name":"Integrated_Writing_Feedback_Forma
                                                    "items": {
                                                        "type": "object",
                                                        "properties": {
-                                                           "sentence": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"}
-													   }
+                                                            "feedback": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"},
+                                                            "feedbackType": {"enum": ["Content & Details Given", "Grammar", "Structure/Flow", "Good"]}
+                                                       }
 												   }
 											   }
 										   }
@@ -381,7 +383,7 @@ Score each section on the rubric independently of each other. It is possible for
 Output your response in a JSON.
 '''
 INDEPENDENT_SPEAKING_FEEDBACK_SYSPROMPT = '''
-You are a teacher who is reviewing students' oral exams. Students are given some choices in a prompt and are supposed to take a perspective and explain their reasoning behind their perspective. The student's scores have been returned to you. Based on these scores given according to the rubric below, provide some general feedback for the student to improve their essay, touching on the content, coherence, grammar and language use, and delivery according to the rubric. Then, provide sentence feedback by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or negative feedback. Note that because you are reading a student transcript, the grammar is possibly a bit different.
+You are a teacher who is reviewing students' oral exams. Students are given some choices in a prompt and are supposed to take a perspective and explain their reasoning behind their perspective. The student's scores have been returned to you. Based on these scores given according to the rubric below, provide some general feedback for the student to improve their essay, touching on the content, coherence, grammar and language use, and delivery according to the rubric. Then, provide sentence feedback for content, coherence, or grammar and language use by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or constructive feedback. Note that because you are reading a student transcript, the grammar is possibly a bit different. After, if the sentence is constructive feedback, label each sentence's feedback with a keyword depending on which rubric category the feedback falls under. The possible keywords are: "Content", "Coherence", "Grammar and Language Use". If the sentence is positive feedback, then use the keyword "Good". 
 
 Content:
 4: Takes a perspective and provides well-explained reasoning or examples for this perspective
@@ -410,7 +412,7 @@ Delivery:
 Output Your Response in a JSON.
 '''
 INTEGRATED_SPEAKING_FEEDBACK_SYSPROMPT = '''
-You are a teacher who is reviewing students' oral exams. Students are given a passage and stimulus, and are meant to summarize or explain the contents of the stimulus based on a given prompt. The student's scores have been returned to you. Based on these scores given according to the rubric below, provide some general feedback for the student to improve their essay, touching on the content, coherence, grammar and language use, and delivery according to the rubric. Then, provide sentence feedback by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences.Give feedback for every sentence, whether it is positive or negative feedback. Note that because you are reading a student transcript, the grammar is possibly a bit different.
+You are a teacher who is reviewing students' oral exams. Students are given a passage and stimulus, and are meant to summarize or explain the contents of the stimulus based on a given prompt. The student's scores have been returned to you. Based on these scores given according to the rubric below, provide some general feedback for the student to improve their essay, touching on the content, coherence, grammar and language use, and delivery according to the rubric. Then, provide sentence feedback for content, coherence, or grammar and language use by presenting the corresponding feedback for every sentence as numbered. The order of the array holding feedback should correspond to the order of sentences. Give feedback for every sentence, whether it is positive or constructive feedback. Note that because you are reading a student transcript, the grammar is possibly a bit different. After, if the sentence is constructive feedback, label each sentence's feedback with a keyword depending on which rubric category the feedback falls under. The possible keywords are: "Content", "Coherence", "Grammar and Language Use". If the sentence is positive feedback, then use the keyword "Good".
 
 Content:
 4: Takes a perspective and provides well-explained reasoning or examples for this perspective
@@ -471,8 +473,9 @@ SPEAKING_FEEDBACK_FORMAT = [{"name":"Speaking_Feedback_Format",
                                                    "items": {
                                                        "type": "object",
                                                        "properties": {
-                                                           "sentence": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"}
-													   }
+                                                            "feedback": {"type": "string", "description": "Sentence Feedback in Simplified Chinese"},
+                                                            "feedbackType": {"enum": ["Content", "Coherence", "Grammar and Language use", "Good"]}
+                                                       }
 												   }
 											   }
 										   }
