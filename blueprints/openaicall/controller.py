@@ -117,7 +117,7 @@ class OpenAIController():
                         queue.put(f"data: {data}\n")
                     else:
                         break  # Exit if no content
-                queue.put(f"data: [DONE!]")
+                queue.put(f"data: [DONE!]\n\n")
             finally:
                 queue.put(None)  # Signal that streaming is done
 
@@ -231,7 +231,7 @@ class OpenAIController():
                         count += 1
                     else:
                         finish = True
-                queue.put(f"data: [DONE!]\n")
+                queue.put(f"data: [DONE!]\n\n")
                 total_txt += '[DONE!]'
                 # print("TOTAL: ", total_txt)
             finally:
