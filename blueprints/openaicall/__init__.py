@@ -25,6 +25,7 @@ import urllib.request as urllib2
 from blueprints.openaicall.controller import OpenAIController
 from utils.response_tools import (SuccessDataResponse, ArgumentExceptionResponse)
 from utils import generate_uuid_id
+from utils.redis_tools import RedisWrapper
 
 openai.api_key = OPEN_AI_API_KEY
 appKey = SPEECHSUPER_APPKEY
@@ -34,9 +35,6 @@ router = APIRouter(
     prefix="/v1/modelapi",
     tags=["openaicall"]
 )
-
-global_state = {}
-
 
 # ================================== Toefl Study ===========================#
 @router.post("/writing/gradeWriting/")
@@ -49,7 +47,7 @@ async def gradeWriting(essay: Essay):
         format = ACADEMIC_DISCUSSION_GRADING_FORMAT
     elif essay.gradeType == "Integrated Writing":
         sys_prompt = INTEGRATED_WRITING_GRADING_SYSPROMPT
-        format=INTEGRATED_WRITING_GRADING_FORMAT
+        format = INTEGRATED_WRITING_GRADING_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
 
@@ -135,7 +133,7 @@ async def gradeWriting(essay: Essay):
 
     dict_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
-        dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["sentence"]
+        dict_feedback[str(i + 1)] = feedback["Sentence Feedback"][i]["sentence"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
     # get editing
     res, edit = OpenAIController().FormatOpenAICall(
@@ -189,6 +187,7 @@ async def gradeWriting(essay: Essay):
         return SuccessDataResponse(data=data)
     else:
         return ArgumentExceptionResponse(msg=data)
+
 
 @router.post("/speaking/gradeSpeaking/")
 async def gradeSpeaking(speak: Speak):
@@ -250,13 +249,13 @@ async def gradeSpeaking(speak: Speak):
     try:
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
-            student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
+            student_transcript[str(i + 1)] = speech_res["result"]["sentences"][i]["sentence"]
         d.update({"Content": student_transcript})
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
     # GPT Grading
-    format=SPEAKING_GRADING_FORMAT
+    format = SPEAKING_GRADING_FORMAT
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_GRADING_SYSPROMPT
     elif speak.gradeType == "Integrated Speaking":
@@ -280,7 +279,9 @@ async def gradeSpeaking(speak: Speak):
         grades["Vocabulary Usage"] = speech_res["result"]["lexical_resource"] // 2
         grades["Fluency"] = speech_res["result"]["fluency_coherence"] // 2
         grades["Pronunciation"] = speech_res["result"]["pronunciation"] // 2
-        tot = math.ceil(grades["Content"] + grades["Coherence"] + ((grades["Grammar"] + grades["Vocabulary Usage"]) / 2) + (grades["Fluency"] + grades["Pronunciation"]) / 2)
+        tot = math.ceil(
+            grades["Content"] + grades["Coherence"] + ((grades["Grammar"] + grades["Vocabulary Usage"]) / 2) + (
+                        grades["Fluency"] + grades["Pronunciation"]) / 2)
         avg = math.floor(tot / 2) / 2
         d["Overall"] = str(avg)
         for k, v in grades.items():
@@ -290,17 +291,21 @@ async def gradeSpeaking(speak: Speak):
         return ArgumentExceptionResponse(msg=str(e))
     # Send Feedback Request
     try:
-        format=SPEAKING_FEEDBACK_FORMAT
+        format = SPEAKING_FEEDBACK_FORMAT
         if speak.gradeType == "Independent Speaking":
             sys_prompt = INDEPENDENT_SPEAKING_FEEDBACK_SYSPROMPT
         elif speak.gradeType == "Integrated Speaking":
             sys_prompt = INTEGRATED_SPEAKING_FEEDBACK_SYSPROMPT
         else:
             return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-        user_prompt = "Prompt:\n" + speak.prompt + "\nStudent Transcript:\n" + json.dumps(student_transcript, indent=4) + "\nScore:\n"
-        user_prompt += "Content: " + grades["Content"] + "\nCoherence: " + grades["Coherence"] + "\nGrammar and Language Use: " + str((int(grades["Grammar"]) + int(grades["Vocabulary Usage"]))/2) + "\nDelivery: " + str((int(grades["Fluency"]) + int(grades["Pronunciation"]))/2)
+        user_prompt = "Prompt:\n" + speak.prompt + "\nStudent Transcript:\n" + json.dumps(student_transcript,
+                                                                                          indent=4) + "\nScore:\n"
+        user_prompt += "Content: " + grades["Content"] + "\nCoherence: " + grades[
+            "Coherence"] + "\nGrammar and Language Use: " + str(
+            (int(grades["Grammar"]) + int(grades["Vocabulary Usage"])) / 2) + "\nDelivery: " + str(
+            (int(grades["Fluency"]) + int(grades["Pronunciation"])) / 2)
     except Exception as e:
-        return ArgumentExceptionResponse(msg=str(e)) 
+        return ArgumentExceptionResponse(msg=str(e))
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -317,7 +322,7 @@ async def gradeSpeaking(speak: Speak):
             gen_feedback += k + ": " + v + "\n"
         temp_sent_feedback = {}
         for i in range(len(feedback["Sentence Feedback"])):
-            temp_sent_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["sentence"]
+            temp_sent_feedback[str(i + 1)] = feedback["Sentence Feedback"][i]["sentence"]
 
         d.update({"General Feedback": gen_feedback})
         d.update({"Sentence Feedback": temp_sent_feedback})
@@ -330,8 +335,8 @@ async def gradeSpeaking(speak: Speak):
                 else:
                     word_pronunciation[w["word"]].append(w["pronunciation"])
         for k, v in word_pronunciation.items():
-            if math.floor(sum(v)/len(v)) < 60:
-                pronunciation[k] = str(math.floor(sum(v)/len(v)))
+            if math.floor(sum(v) / len(v)) < 60:
+                pronunciation[k] = str(math.floor(sum(v) / len(v)))
         d.update({"Bad Pronunciation Scores": pronunciation})
 
     except Exception as e:
@@ -342,6 +347,7 @@ async def gradeSpeaking(speak: Speak):
         return SuccessDataResponse(data=data)
     else:
         return ArgumentExceptionResponse(msg=data)
+
 
 # ================================== AI Assistant (streaming) ===========================#
 @router.post("/assistantChatbot_old/")
@@ -366,17 +372,24 @@ async def chatbotRespond(chatbotMessage: ChatbotMessage):
 async def setup_endpoint(request: Request):
     data = await request.json()
     _uuid = generate_uuid_id()
-    global_state[_uuid] = data
+    r = RedisWrapper()
+    r.set(_uuid, data, 60 * 60 * 8)  # 缓存8个小时
     return SuccessDataResponse(data={"message": "message received", "clientId": _uuid})
 
 
 @router.get('/assistantChatbot/{client_id}/', status_code=200)
 async def chatbotRespond(client_id: str):
-    if client_id not in global_state:
-        return ArgumentExceptionResponse(msg='ID not found')
-    
-    data_input = global_state.get(client_id, {})
-    del global_state[client_id] 
+    r = RedisWrapper()
+    usr_input = RedisWrapper('memory')
+    client_request = r.get(client_id)
+    if not client_request:
+        return ArgumentExceptionResponse(msg='未找到ID或已过期，请重新请求')
+
+    data_input = client_request
+    if data_input["chatbotQuery"]:
+        usr_input.set(client_id, data_input["chatbotQuery"])
+
+    r.delete(client_id)
 
     user_prompt = data_input["Main Content"] + "\n"
     match data_input["toeflType"]:
@@ -430,7 +443,7 @@ async def chatbotRespond(client_id: str):
                 return ArgumentExceptionResponse(msg='Invalid queryType')
         case _:
             return ArgumentExceptionResponse(msg='Invalid toeflType')
-        
+
     model = "gpt-4-0125-preview"
     token_size = 512
     temp = 0
@@ -444,14 +457,18 @@ async def chatbotRespond(client_id: str):
     return response
     # Start the OpenAI stream in a background thread
 
+
 # ================================== Vocab Learning (streaming) ===========================#
 @router.get("/getVocabContent/{client_id}/", status_code=200)
 async def getVocabContent(client_id: str):
-    if client_id not in global_state:
-        return ArgumentExceptionResponse(msg='ID not found')
+    r = RedisWrapper()
+    client_request = r.get(client_id)
+    if not client_request:
+        return ArgumentExceptionResponse(msg='未找到ID或已过期，请重新请求')
 
-    data_input = global_state.get(client_id, {})
-    del global_state[client_id]
+    data_input = client_request
+    r.delete(client_id)
+
     model = "gpt-4-0125-preview"
     token_size = 4096
     temp = 0.75
@@ -461,6 +478,7 @@ async def getVocabContent(client_id: str):
         temp=temp,
         vocabs=data_input
     ), media_type="text/event-stream")
+
 
 @router.post("/test/")
 async def heartbeat():
