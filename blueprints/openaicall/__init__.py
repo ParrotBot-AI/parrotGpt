@@ -249,6 +249,8 @@ async def gradeSpeaking(speak: Speak):
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
 
     try:
+        if speech_res["result"]["effective_speech_length"] <= 10:
+            return ArgumentExceptionResponse(msg="Error: Input too short")
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
             student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
