@@ -133,7 +133,7 @@ async def gradeWriting(essay: Essay):
 
     dict_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
-        dict_feedback[str(i + 1)] = feedback["Sentence Feedback"][i]["sentence"]
+        dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
     # get editing
     res, edit = OpenAIController().FormatOpenAICall(
@@ -150,8 +150,9 @@ async def gradeWriting(essay: Essay):
     for i in range(len(feedback["Sentence Feedback"])):
         try:
             sentence_feedback[str(i + 1)] = {
-                "Feedback": feedback["Sentence Feedback"][i]["sentence"],
-                "Edited": edit["Edited Version"][i]["sentence"]
+                "Feedback": feedback["Sentence Feedback"][i]["feedback"],
+                "Edited": edit["Edited Version"][i]["sentence"],
+                "Type": feedback["Sentence Feedback"][i]["feedbackType"]
             }
         except:
             pass
@@ -247,13 +248,15 @@ async def gradeSpeaking(speak: Speak):
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
 
     try:
+        if speech_res["result"]["effective_speech_length"] <= 10:
+            return ArgumentExceptionResponse(msg="Error: Input too short")
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
             student_transcript[str(i + 1)] = speech_res["result"]["sentences"][i]["sentence"]
         d.update({"Content": student_transcript})
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
-
+    
     # GPT Grading
     format = SPEAKING_GRADING_FORMAT
     if speak.gradeType == "Independent Speaking":
@@ -322,6 +325,8 @@ async def gradeSpeaking(speak: Speak):
             gen_feedback += k + ": " + v + "\n"
         temp_sent_feedback = {}
         for i in range(len(feedback["Sentence Feedback"])):
+            temp_sent_feedback[str(i+1)] = {"Feedback": feedback["Sentence Feedback"][i]["feedback"], "Type": feedback["Sentence Feedback"][i]["feedbackType"]}
+
             temp_sent_feedback[str(i + 1)] = feedback["Sentence Feedback"][i]["sentence"]
 
         d.update({"General Feedback": gen_feedback})
@@ -391,9 +396,9 @@ async def chatbotRespond(client_id: str):
 
     r.delete(client_id)
 
-    user_prompt = data_input["Main Content"] + "\n"
     match data_input["toeflType"]:
         case "Reading":
+            user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
                     sys_prompt = CHATBOT_其他问题_SYSPROMPT
@@ -412,6 +417,7 @@ async def chatbotRespond(client_id: str):
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Listening":
+            user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
                     sys_prompt = CHATBOT_其他问题_SYSPROMPT
@@ -430,22 +436,27 @@ async def chatbotRespond(client_id: str):
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Speaking":
+            user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
                 sys_prompt = CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Writing":
+            user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
                 sys_prompt = CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
+        case "Misc":
+            sys_prompt = CHATBOT_MISC_SYSPROMPT
+            user_prompt = data_input["chatbotQuery"]
         case _:
             return ArgumentExceptionResponse(msg='Invalid toeflType')
 
     model = "gpt-4-0125-preview"
-    token_size = 512
+    token_size = 1024
     temp = 0
     response = StreamingResponse(OpenAIController().OpenAiStreaming(
         sys_prompt=sys_prompt,
