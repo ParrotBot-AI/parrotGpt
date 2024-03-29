@@ -26,7 +26,8 @@ from blueprints.openaicall.controller import OpenAIController
 from utils.response_tools import (SuccessDataResponse, ArgumentExceptionResponse)
 from utils import generate_uuid_id
 from utils.redis_tools import RedisWrapper
-
+from utils.logger_tools import get_general_logger
+from utils import abspath
 openai.api_key = OPEN_AI_API_KEY
 appKey = SPEECHSUPER_APPKEY
 secretKey = SPEECHSUPER_SECRETKEY
@@ -36,11 +37,13 @@ router = APIRouter(
     tags=["openaicall"]
 )
 
+logger = get_general_logger('gpt_res', path=abspath('logs', 'web_res'))
+
 # ================================== Toefl Study ===========================#
 @router.post("/writing/gradeWriting/")
 async def gradeWriting(essay: Essay):
     d = {}
-
+    logger.info(f"API: /writing/gradeWriting/ was called")
     # Read Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_GRADING_SYSPROMPT
@@ -185,6 +188,7 @@ async def gradeWriting(essay: Essay):
 
     res, data = OpenAIController().censorOutput(d)
     if res:
+        logger.info(f"API: /writing/gradeWriting/ responded")
         return SuccessDataResponse(data=data)
     else:
         return ArgumentExceptionResponse(msg=data)
@@ -193,7 +197,7 @@ async def gradeWriting(essay: Essay):
 @router.post("/speaking/gradeSpeaking/")
 async def gradeSpeaking(speak: Speak):
     d = {}
-
+    logger.info(f"API: /speaking/gradeSpeaking/ was called")
     # Feed to SpeechSuper
     userId = "guest"
     timestamp = str(int(time.time()))
@@ -349,6 +353,7 @@ async def gradeSpeaking(speak: Speak):
 
     res, data = OpenAIController().censorOutput(d)
     if res:
+        logger.info(f"API: /writing/gradeSpeaking/ responded")
         return SuccessDataResponse(data=data)
     else:
         return ArgumentExceptionResponse(msg=data)
