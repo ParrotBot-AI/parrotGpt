@@ -24,7 +24,9 @@ setup(name=PROJECT_NAME,
           'setuptools~=65.5.0',
           'crontab~=0.23.0',
           'pytz',
-          'sseclient'
+          'sseclient',
+          "redis==4.2.1",
+          "simplejson==3.17.6"
       ],
       zip_safe=False
       )
