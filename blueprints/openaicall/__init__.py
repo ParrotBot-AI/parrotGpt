@@ -229,7 +229,7 @@ async def gradeSpeaking(speak: Speak):
                     "timestamp": timestamp
                 },
                 "audio": {
-                    "audioType": "mp3",
+                    "audioType": "wav",
                     "channel": 1,
                     "sampleBytes": 2,
                     "sampleRate": 16000
@@ -247,9 +247,13 @@ async def gradeSpeaking(speak: Speak):
     files = {"audio": urllib2.urlopen(speak.audioLink)}
     res = requests.post(url, data=data, headers=headers, files=files)
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
-
+    print(speech_res)
     try:
-        if speech_res["result"]["effective_speech_length"] <= 10:
+        if "error" in speech_res.keys():
+            return ArgumentExceptionResponse(msg=speech_res["error"])
+        elif "warning" in speech_res["result"]:
+            return ArgumentExceptionResponse(msg=speech_res["result"]["warning"]["message"])
+        elif speech_res["result"]["effective_speech_length"] <= 10:
             return ArgumentExceptionResponse(msg="Error: Input too short")
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
