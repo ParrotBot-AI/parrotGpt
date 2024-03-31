@@ -114,7 +114,7 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=feedback)
     try:
         gen_feedback = ""
         for k, v in feedback["General Feedback"].items():
@@ -147,7 +147,7 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=edit)
     sentence_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         try:
@@ -156,8 +156,8 @@ async def gradeWriting(essay: Essay):
                 "Edited": edit["Edited Version"][i]["sentence"],
                 "Type": feedback["Sentence Feedback"][i]["feedbackType"]
             }
-        except:
-            pass
+        except Exception as e:
+            return ArgumentExceptionResponse(msg=str(e))
 
     d.update({"Sentence Feedback": sentence_feedback})
 
@@ -182,14 +182,14 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=mindmap)
     d.update(mindmap)
 
-    res, data = OpenAIController().censorOutput(d)
+    res, censorData = OpenAIController().censorOutput(d)
     if res:
-        return SuccessDataResponse(data=data)
+        return SuccessDataResponse(data=censorData)
     else:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=censorData)
 
 @router.post("/speaking/gradeSpeaking/")
 async def gradeSpeaking(speak: Speak):
@@ -344,11 +344,11 @@ async def gradeSpeaking(speak: Speak):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
-    res, data = OpenAIController().censorOutput(d)
+    res, censorData = OpenAIController().censorOutput(d)
     if res:
-        return SuccessDataResponse(data=data)
+        return SuccessDataResponse(data=censorData)
     else:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=censorData)
 
 # ================================== AI Assistant (streaming) ===========================#
 @router.post("/assistantChatbot_old/")
