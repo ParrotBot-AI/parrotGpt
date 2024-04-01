@@ -173,6 +173,17 @@ async def gradeWriting(essay: Essay):
 
     d.update({"Sentence Feedback": sentence_feedback})
 
+    try:
+        sum = 0
+        for k, v in edit["New Score"].items():
+            sum += v
+        if essay.gradeType == "Academic Discussion":
+            d["Edited Overall"] = str(sum / 4)
+        elif essay.gradeType == "Integrated Writing":
+            d["Edited Overall"] = str(math.floor(sum * 4 / 3) / 4)
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+
     # Make a mind-map
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_MINDMAP_SYSPROMPT

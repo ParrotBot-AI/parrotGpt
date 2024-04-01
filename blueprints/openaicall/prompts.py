@@ -45,10 +45,10 @@ ACADEMIC_DISCUSSION_GRADING_FORMAT = [{"name":"Academic_Discussion_Grading_Forma
                                               "Grades": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "Contribution": {"type": "integer", "description": "Score for Contribution"},
-                                                      "Relevance": {"type": "integer", "description": "Score for Relevance"},
-                                                      "Grammar": {"type": "integer", "description": "Score for Grammar"},
-                                                      "Structure/Flow": {"type": "integer", "description": "Score for Structdure/Flow"}
+                                                      "Contribution": {"description": "Score for Contribution", "enum": [1,2,3,4,5]},
+                                                      "Relevance": {"description": "Score for Relevance", "enum": [1,2,3,4,5]},
+                                                      "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
+                                                      "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
 												   } 
 											   }
 										   }
@@ -120,7 +120,7 @@ ACADEMIC_DISCUSSION_FEEDBACK_FORMAT = [{"name":"Academic_Discussion_Feedback_For
 									   }
 									}]
 ACADEMIC_DISCUSSION_EDITING_SYSPROMPT = '''
-You are a teacher who is reviewing students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. The student's essay has each sentence numbered. Feedback for the student's essay have been returned to you, with general feedback as well as sentence feedback based on the corresponding sentence numbers. Using the feedback given according to the rubric below, edit the student's essay to achieve a better score by changing sentences that have issues with them, and then score your own edited version of the essay. If a sentence does not need changing, simply output "No Change" instead.
+You are a teacher who is reviewing students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. The student's essay has each sentence numbered. Feedback for the student's essay have been returned to you, with general feedback as well as sentence feedback based on the corresponding sentence numbers. Using the feedback given according to the rubric below, edit the student's essay to achieve a better score by changing sentences that have issues with them, and then score your own edited version of the essay. The edited scores should be greater than or equal to the original scores. If a sentence does not need changing, simply output "No Change" instead.
 
 Contribution
 5: Includes the student's own perspective on the topic and thoroughly explains this perspective
@@ -159,10 +159,10 @@ ACADEMIC_DISCUSSION_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Forma
                                               "New Score": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "Contribution": {"type": "integer", "description": "Score for Contribution"},
-                                                      "Relevance": {"type": "integer", "description": "Score for Relevance"},
-                                                      "Grammar": {"type": "integer", "description": "Score for Grammar"},
-                                                      "Structure/Flow": {"type": "integer", "description": "Score for Structure/Flow"}
+                                                      "Contribution": {"description": "Score for Contribution", "enum": [1,2,3,4,5]},
+                                                      "Relevance": {"description": "Score for Relevance", "enum": [1,2,3,4,5]},
+                                                      "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
+                                                      "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
 												   } 
 											   },
                                                "Edited Version": {
@@ -225,9 +225,9 @@ INTEGRATED_WRITING_GRADING_FORMAT = [{"name":"Integrated_Writing_Grading_Format"
                                               "Grades": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "Content & Details Given": {"type": "integer", "description": "Score for Content & Details Given"},
-                                                      "Grammar": {"type": "integer", "description": "Score for Grammar"},
-                                                      "Structure/Flow": {"type": "integer", "description": "Score for Structure/Flow"}
+                                                      "Content & Details Given": {"description": "Score for Content & Details Given", "enum": [1,2,3,4,5]},
+                                                      "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
+                                                      "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
 												   } 
 											   }
 										   }
@@ -291,7 +291,7 @@ INTEGRATED_WRITING_FEEDBACK_FORMAT = [{"name":"Integrated_Writing_Feedback_Forma
 									   }
 									}]
 INTEGRATED_WRITING_EDITING_SYSPROMPT='''
-You are a teacher who is reviewing students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. The student's essay has each sentence numbered. Feedback for the student's essay have been returned to you, with general feedback as well as sentence feedback based on the corresponding sentence numbers. Using the feedback given according to the rubric below, edit the student's essay to achieve a better score by changing sentences that have issues with them, and then score your own edited version of the essay. If a sentence does not need changing, simply output "No Change" instead.
+You are a teacher who is reviewing students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. The student's essay has each sentence numbered. Feedback for the student's essay have been returned to you, with general feedback as well as sentence feedback based on the corresponding sentence numbers. Using the feedback given according to the rubric below, edit the student's essay to achieve a better score by changing sentences that have issues with them, and then score your own edited version of the essay. The edited scores should be greater than or equal to the original scores. If a sentence does not need changing, simply output "No Change" instead.
 
 Content & Details Given
 5: Response contains main ideas from both mediums, most details, and connects the two accurately while utilizing many keywords used in the passage and audio clip.
@@ -323,9 +323,9 @@ INTEGRATED_WRITING_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Format
                                               "New Score": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "Content & Details Given": {"type": "integer", "description": "Score for Content & Details Given"},
-                                                      "Grammar": {"type": "integer", "description": "Score for Grammar"},
-                                                      "Structure/Flow": {"type": "integer", "description": "Score for Structure/Flow"}
+                                                      "Content & Details Given": {"description": "Score for Content & Details Given", "enum": [1,2,3,4,5]},
+                                                      "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
+                                                      "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
 												   } 
 											   },
                                                "Edited Version": {
@@ -457,8 +457,8 @@ SPEAKING_GRADING_FORMAT = [{"name":"Speaking_Grading_Format",
                                               "Grades": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "Content": {"type": "integer", "description": "Score for Content"},
-                                                      "Coherence": {"type": "integer", "description": "Score for Coherence"}
+                                                      "Content": {"description": "Score for Content", "enum": [1,2,3,4]},
+                                                      "Coherence": {"description": "Score for Coherence", "enum": [1,2,3,4]}
 												   } 
 											   }
 										   }
