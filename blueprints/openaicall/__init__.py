@@ -54,7 +54,8 @@ async def gradeWriting(essay: Essay):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
 
-    content = {}
+    new_content = []
+    gpt_content = {}
     # Add spaces between sentences as necessary
     len_content = len(essay.content) - 1
     i = 0
@@ -63,12 +64,23 @@ async def gradeWriting(essay: Essay):
             essay.content = essay.content[:i + 1] + " " + essay.content[i + 1:]
             len_content += 1
         i += 1
+
+    # Split the student's essay into paragraphs
+    content = essay.content.splitlines()
     # Use nltk sent_tokenize to separate sentences
-    paragraph = sent_tokenize(essay.content)
-    for i in range(len(paragraph)):
-        content[str(i + 1)] = paragraph[i]
-    user_prompt = essay.prompt + "\n\n" + json.dumps(content, indent=4)
-    d.update({"Content": content})
+    for i in range(len(content)):
+        content[i] = sent_tokenize(content[i])
+    counter = 1
+    # new_counter holds the object that will be returned
+    # gpt_counter holds the object that gpt gets
+    for i in range(len(content)):
+        new_content.append({})
+        for j in range(len(content[i])):
+            new_content[i][str(counter)] = content[i][j]
+            gpt_content[str(counter)] = content[i][j]
+            counter += 1
+    user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
+    d.update({"Content": new_content})
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -115,7 +127,7 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=feedback)
     try:
         gen_feedback = ""
         for k, v in feedback["General Feedback"].items():
@@ -148,7 +160,7 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=edit)
     sentence_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         try:
@@ -157,8 +169,8 @@ async def gradeWriting(essay: Essay):
                 "Edited": edit["Edited Version"][i]["sentence"],
                 "Type": feedback["Sentence Feedback"][i]["feedbackType"]
             }
-        except:
-            pass
+        except Exception as e:
+            return ArgumentExceptionResponse(msg=str(e))
 
     d.update({"Sentence Feedback": sentence_feedback})
 
@@ -183,15 +195,16 @@ async def gradeWriting(essay: Essay):
         format=format
     )
     if not res:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=mindmap)
     d.update(mindmap)
 
-    res, data = OpenAIController().censorOutput(d)
+    res, censorData = OpenAIController().censorOutput(d)
     if res:
+        return SuccessDataResponse(data=censorData)
         logger.info(f"API: /writing/gradeWriting/ responded")
-        return SuccessDataResponse(data=data)
+        return SuccessDataResponse(data=censorData)
     else:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=censorData)
 
 
 @router.post("/speaking/gradeSpeaking/")
@@ -250,7 +263,6 @@ async def gradeSpeaking(speak: Speak):
     files = {"audio": urllib2.urlopen(speak.audioLink)}
     res = requests.post(url, data=data, headers=headers, files=files)
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
-    print(speech_res)
     try:
         if "error" in speech_res.keys():
             return ArgumentExceptionResponse(msg=speech_res["error"])
@@ -260,8 +272,9 @@ async def gradeSpeaking(speak: Speak):
             return ArgumentExceptionResponse(msg="Error: Input too short")
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
-            student_transcript[str(i + 1)] = speech_res["result"]["sentences"][i]["sentence"]
-        d.update({"Content": student_transcript})
+            student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
+        d.update({"Content": [student_transcript]})
+
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     
@@ -355,12 +368,13 @@ async def gradeSpeaking(speak: Speak):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
-    res, data = OpenAIController().censorOutput(d)
+    res, censorData = OpenAIController().censorOutput(d)
     if res:
+        return SuccessDataResponse(data=censorData)
         logger.info(f"API: /writing/gradeSpeaking/ responded")
-        return SuccessDataResponse(data=data)
+        return SuccessDataResponse(data=censorData)
     else:
-        return ArgumentExceptionResponse(msg=data)
+        return ArgumentExceptionResponse(msg=censorData)
 
 
 # ================================== AI Assistant (streaming) ===========================#
