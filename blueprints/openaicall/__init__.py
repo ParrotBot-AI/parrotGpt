@@ -191,6 +191,7 @@ async def gradeWriting(essay: Essay):
         return ArgumentExceptionResponse(msg=str(e))
 
     # Make a mind-map
+    format = MINDMAP_FORMAT
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_MINDMAP_SYSPROMPT
     elif essay.gradeType == "Integrated Writing":
@@ -198,8 +199,8 @@ async def gradeWriting(essay: Essay):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
 
-    user_prompt = json.dumps(content, indent=4)
-    format = MINDMAP_FORMAT
+    print(gpt_content)
+    user_prompt = json.dumps(gpt_content, indent=4)
 
     # get mindmap
     res, mindmap = OpenAIController().FormatOpenAICall(
@@ -391,6 +392,29 @@ async def gradeSpeaking(speak: Speak):
             return ArgumentExceptionResponse(msg=str(e))
 
     d.update({"Sentence Feedback": sentence_feedback})
+
+    # Make a mind-map
+    format = MINDMAP_FORMAT
+    if speak.gradeType == "Independent Speaking":
+        sys_prompt = INDEPENDENT_SPEAKING_MINDMAP_SYSPROMPT
+    elif speak.gradeType == "Integrated Speaking":
+        sys_prompt = INTEGRATED_SPEAKING_MINDMAP_SYSPROMPT
+    else:
+        return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+    
+    user_prompt = json.dumps(student_transcript, indent=4)
+    # get mindmap
+    res, mindmap = OpenAIController().FormatOpenAICall(
+        sys_prompt=sys_prompt,
+        user_prompt=user_prompt,
+        model="gpt-4-0125-preview",
+        token_size=1024,
+        temp=1,
+        format=format
+    )
+    if not res:
+        return ArgumentExceptionResponse(msg=mindmap)
+    d.update(mindmap)
 
     try:
         word_pronunciation = {}
