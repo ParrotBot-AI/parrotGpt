@@ -53,6 +53,7 @@ async def gradeWriting(essay: Essay):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
 
+    content = []
     new_content = []
     gpt_content = {}
     # Add spaces between sentences as necessary
@@ -65,13 +66,17 @@ async def gradeWriting(essay: Essay):
         i += 1
 
     # Split the student's essay into paragraphs
-    content = essay.content.splitlines()
+    unclean_content = essay.content.splitlines()
+    for i in unclean_content:
+        if i != '':
+            content.append(i)
+
     # Use nltk sent_tokenize to separate sentences
     for i in range(len(content)):
         content[i] = sent_tokenize(content[i])
     counter = 1
-    # new_counter holds the object that will be returned
-    # gpt_counter holds the object that gpt gets
+    # new_content holds the object that will be returned
+    # gpt_content holds the object that gpt gets
     for i in range(len(content)):
         new_content.append({})
         for j in range(len(content[i])):
@@ -149,6 +154,7 @@ async def gradeWriting(essay: Essay):
     for i in range(len(feedback["Sentence Feedback"])):
         dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
+
     # get editing
     res, edit = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
@@ -317,6 +323,7 @@ async def gradeSpeaking(speak: Speak):
         d.update({"Grades": grades})
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
+    
     # Send Feedback Request
     try:
         format=SPEAKING_FEEDBACK_FORMAT
@@ -344,12 +351,48 @@ async def gradeSpeaking(speak: Speak):
         gen_feedback = ""
         for k, v in feedback["General Feedback"].items():
             gen_feedback += k + ": " + v + "\n"
-        temp_sent_feedback = {}
-        for i in range(len(feedback["Sentence Feedback"])):
-            temp_sent_feedback[str(i+1)] = {"Feedback": feedback["Sentence Feedback"][i]["feedback"], "Type": feedback["Sentence Feedback"][i]["feedbackType"]}
-
         d.update({"General Feedback": gen_feedback})
-        d.update({"Sentence Feedback": temp_sent_feedback})
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e)) 
+    
+    # Send Editing Request
+    format=SPEAKING_EDITING_FORMAT
+    if speak.gradeType == "Independent Speaking":
+        sys_prompt = INDEPENDENT_SPEAKING_EDITING_SYSPROMPT
+    elif speak.gradeType == "Integrated Speaking":
+        sys_prompt = INTEGRATED_SPEAKING_EDITING_SYSPROMPT
+    else:
+        return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+
+    dict_feedback = {}
+    for i in range(len(feedback["Sentence Feedback"])):
+        dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
+    user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
+
+    res, edit = OpenAIController().FormatOpenAICall(
+        sys_prompt=sys_prompt,
+        user_prompt=user_prompt,
+        model="gpt-4-0125-preview",
+        token_size=4096,
+        temp=1,
+        format=format
+    )
+    if not res:
+        return ArgumentExceptionResponse(msg=edit)
+    sentence_feedback = {}
+    for i in range(len(feedback["Sentence Feedback"])):
+        try:
+            sentence_feedback[str(i + 1)] = {
+                "Feedback": feedback["Sentence Feedback"][i]["feedback"],
+                "Edited": edit["Edited Version"][i]["sentence"],
+                "Type": feedback["Sentence Feedback"][i]["feedbackType"]
+            }
+        except Exception as e:
+            return ArgumentExceptionResponse(msg=str(e))
+
+    d.update({"Sentence Feedback": sentence_feedback})
+
+    try:
         word_pronunciation = {}
         pronunciation = {}
         for s in speech_res["result"]["sentences"]:

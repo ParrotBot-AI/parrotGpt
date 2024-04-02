@@ -53,8 +53,10 @@ class OpenAIController():
         function_call = 'auto'
       )
       if response.choices[0].finish_reason == 'function_call':
+        #print(response.choices[0].message.function_call.arguments)
         data = json.loads(response.choices[0].message.function_call.arguments)
       elif response.choices[0].finish_reason == 'stop':
+        #print(response.choices[0].message.content.replace("```json\n","").replace("`",""))
         data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
       else:
         return False, "OPENAI FUNCTION CALLING ERROR"
