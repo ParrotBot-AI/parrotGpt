@@ -11,17 +11,16 @@
     <script>
         // Function to send initial setup data
         async function sendInitialData() {
-            const response = await fetch('http://localhost:8000/v1/modelapi/assistantChatbot/chat/', {
+            const response = await fetch('http://localhost:8000/v1/modelapi/streaming/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    queryType: "a",
-                    chatbotQuery: "Write me a poem about the TOEFL exam",
-                    passage: "a",
-                    mcq: "a",
-                })
+                        "Ephemeral": "短暂的",
+                        "Serendipity": "意外发现",
+                        "Ubiquitous": "无所不在的",
+                    })
             });
 
             if (response.ok) {
@@ -42,18 +41,27 @@
 
         // Function to connect to the SSE endpoint
         function connectSSE(client_id) {
-            console.log(client_id, 45);
-            const eventSource = new EventSource(`http://localhost:8000/v1/modelapi/assistantChatbot/${client_id}/`);
+            console.log('Connecting with client ID:', client_id);
+            const eventSource = new EventSource(`http://localhost:8000/v1/modelapi/getVocabContent/${client_id}/`);
 
-            eventSource.onmessage = function(event) {
-                const streamOutput = document.getElementById('streamOutput');
-                console.log(`${event.data}`)
-                streamOutput.innerHTML += `${event.data}<br>`;
+            // Success connection
+            eventSource.onopen = function(event) {
+                console.log('SSE opened:', event);
             };
 
+            // Handle incoming messages
+            eventSource.onmessage = function(event) {
+                console.log('Data received:', event.data);
+                const streamOutput = document.getElementById('streamOutput');
+                const newLine = document.createElement('div'); // Create a new div for each message
+                newLine.innerHTML = event.data;
+                streamOutput.appendChild(newLine); // Append the new div to the streamOutput element
+            };
+
+            // Handle any errors that occur
             eventSource.onerror = function(error) {
-                console.error("SSE error:", error);
-                eventSource.close();
+                console.error('SSE error:', error);
+                eventSource.close(); // Close the connection if an error occurs
             };
         }
 

@@ -10,3 +10,5 @@ crontab~=0.23.0
 uvicorn
 pytz
 sseclient
+redis==4.2.1
+simplejson==3.17.6
