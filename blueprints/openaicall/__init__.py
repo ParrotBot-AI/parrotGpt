@@ -348,8 +348,6 @@ async def gradeSpeaking(speak: Speak):
         for i in range(len(feedback["Sentence Feedback"])):
             temp_sent_feedback[str(i+1)] = {"Feedback": feedback["Sentence Feedback"][i]["feedback"], "Type": feedback["Sentence Feedback"][i]["feedbackType"]}
 
-            temp_sent_feedback[str(i + 1)] = feedback["Sentence Feedback"][i]["sentence"]
-
         d.update({"General Feedback": gen_feedback})
         d.update({"Sentence Feedback": temp_sent_feedback})
         word_pronunciation = {}
