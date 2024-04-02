@@ -57,6 +57,7 @@ async def gradeWriting(essay: Essay):
     content = []
     new_content = []
     gpt_content = {}
+
     # Add spaces between sentences as necessary
     len_content = len(essay.content) - 1
     i = 0
@@ -76,6 +77,8 @@ async def gradeWriting(essay: Essay):
     for i in range(len(content)):
         content[i] = sent_tokenize(content[i])
     counter = 1
+
+    # Prepare Grades Request
     # new_content holds the object that will be returned
     # gpt_content holds the object that gpt gets
     for i in range(len(content)):
@@ -86,6 +89,8 @@ async def gradeWriting(essay: Essay):
             counter += 1
     user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
     d.update({"Content": new_content})
+
+    # Send Grades Request
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -96,6 +101,8 @@ async def gradeWriting(essay: Essay):
     )
     if not res:
         return ArgumentExceptionResponse(msg=data)
+    
+    #Set Up Grades
     try:
         sum = 0
         for k, v in data["Grades"].items():
@@ -107,9 +114,9 @@ async def gradeWriting(essay: Essay):
             d["Overall"] = str(math.floor(sum * 4 / 3) / 4)
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
-
     d.update(data)
-    # Send Feedback Request
+
+    # Prepare Feedback Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_FEEDBACK_SYSPROMPT
         format = ACADEMIC_DISCUSSION_FEEDBACK_FORMAT
@@ -122,7 +129,7 @@ async def gradeWriting(essay: Essay):
     for k, v in data["Grades"].items():
         user_prompt += k + ": " + v + "\n"
 
-    # get feedback
+    # Send Feedback Request
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -133,6 +140,8 @@ async def gradeWriting(essay: Essay):
     )
     if not res:
         return ArgumentExceptionResponse(msg=feedback)
+    
+    #Set up General Feedback
     try:
         gen_feedback = ""
         for k, v in feedback["General Feedback"].items():
@@ -141,7 +150,7 @@ async def gradeWriting(essay: Essay):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
-    # Send Editing Request
+    # Prepare Editing Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_EDITING_SYSPROMPT
         format = ACADEMIC_DISCUSSION_EDITING_FORMAT
@@ -150,13 +159,12 @@ async def gradeWriting(essay: Essay):
         format = ACADEMIC_DISCUSSION_EDITING_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-
     dict_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
 
-    # get editing
+    # Send Editing Request
     res, edit = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -167,6 +175,8 @@ async def gradeWriting(essay: Essay):
     )
     if not res:
         return ArgumentExceptionResponse(msg=edit)
+    
+    #Set Up Sentence Feedback
     sentence_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         try:
@@ -180,6 +190,7 @@ async def gradeWriting(essay: Essay):
 
     d.update({"Sentence Feedback": sentence_feedback})
 
+    #Set Up Edited Score
     try:
         sum = 0
         for k, v in edit["New Score"].items():
@@ -191,7 +202,7 @@ async def gradeWriting(essay: Essay):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
-    # Make a mind-map
+    # Prepare the Mind-Map Request
     format = MINDMAP_FORMAT
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_MINDMAP_SYSPROMPT
@@ -199,11 +210,9 @@ async def gradeWriting(essay: Essay):
         sys_prompt = INTEGRATED_WRITING_MINDMAP_SYSPROMPT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-
-    print(gpt_content)
     user_prompt = json.dumps(gpt_content, indent=4)
 
-    # get mindmap
+    # Send the Mind-Map Request
     res, mindmap = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -216,6 +225,7 @@ async def gradeWriting(essay: Essay):
         return ArgumentExceptionResponse(msg=mindmap)
     d.update(mindmap)
 
+    #Censor
     res, censorData = OpenAIController().censorOutput(d)
     if res:
         return SuccessDataResponse(data=censorData)
@@ -296,8 +306,8 @@ async def gradeSpeaking(speak: Speak):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     
-    # GPT Grading
-    format = SPEAKING_GRADING_FORMAT
+    # Prepare GPT Grading Request
+    format=SPEAKING_GRADING_FORMAT
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_GRADING_SYSPROMPT
     elif speak.gradeType == "Integrated Speaking":
@@ -305,6 +315,8 @@ async def gradeSpeaking(speak: Speak):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
     user_prompt = "Prompt: " + speak.prompt + "\n\nStudent Transcript: " + speech_res["result"]["transcription"]
+
+    # Send GPT Grading Request
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -315,6 +327,8 @@ async def gradeSpeaking(speak: Speak):
     )
     if not res:
         return ArgumentExceptionResponse(msg=data)
+    
+    #Set up Grades
     try:
         grades = data["Grades"]
         grades["Grammar"] = speech_res["result"]["grammar"] // 2
@@ -332,7 +346,7 @@ async def gradeSpeaking(speak: Speak):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     
-    # Send Feedback Request
+    # Prepare Feedback Request
     try:
         format = SPEAKING_FEEDBACK_FORMAT
         if speak.gradeType == "Independent Speaking":
@@ -348,7 +362,9 @@ async def gradeSpeaking(speak: Speak):
             (int(grades["Grammar"]) + int(grades["Vocabulary Usage"])) / 2) + "\nDelivery: " + str(
             (int(grades["Fluency"]) + int(grades["Pronunciation"])) / 2)
     except Exception as e:
-        return ArgumentExceptionResponse(msg=str(e))
+        return ArgumentExceptionResponse(msg=str(e)) 
+    
+    #Send Feedback Request
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -359,6 +375,8 @@ async def gradeSpeaking(speak: Speak):
     )
     if not res:
         return ArgumentExceptionResponse(msg=feedback)
+    
+    #Set Up General Feedback
     try:
         gen_feedback = ""
         for k, v in feedback["General Feedback"].items():
@@ -367,7 +385,7 @@ async def gradeSpeaking(speak: Speak):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e)) 
     
-    # Send Editing Request
+    # Prepare Editing Request
     format=SPEAKING_EDITING_FORMAT
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_EDITING_SYSPROMPT
@@ -375,12 +393,12 @@ async def gradeSpeaking(speak: Speak):
         sys_prompt = INTEGRATED_SPEAKING_EDITING_SYSPROMPT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-
     dict_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
 
+    # Send Editing Request
     res, edit = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -391,6 +409,8 @@ async def gradeSpeaking(speak: Speak):
     )
     if not res:
         return ArgumentExceptionResponse(msg=edit)
+    
+    #Set Up Sentence Feedback
     sentence_feedback = {}
     for i in range(len(feedback["Sentence Feedback"])):
         try:
@@ -401,10 +421,17 @@ async def gradeSpeaking(speak: Speak):
             }
         except Exception as e:
             return ArgumentExceptionResponse(msg=str(e))
-
     d.update({"Sentence Feedback": sentence_feedback})
 
-    # Make a mind-map
+    #Set Up Edited Score
+    try:
+        tot = math.ceil(edit["New Score"]["Content"] + edit["New Score"]["Coherence"] + edit["New Score"]["Grammar and Language Use"] + (int(grades["Fluency"]) + int(grades["Pronunciation"])) / 2)
+        avg = math.floor(tot / 2) / 2
+        d["Edited Overall"] = str(avg)
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+
+    # Set Up Mind-Map Request
     format = MINDMAP_FORMAT
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_MINDMAP_SYSPROMPT
@@ -412,9 +439,9 @@ async def gradeSpeaking(speak: Speak):
         sys_prompt = INTEGRATED_SPEAKING_MINDMAP_SYSPROMPT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-    
     user_prompt = json.dumps(student_transcript, indent=4)
-    # get mindmap
+
+    # Send Mind-Map Request
     res, mindmap = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
@@ -427,6 +454,7 @@ async def gradeSpeaking(speak: Speak):
         return ArgumentExceptionResponse(msg=mindmap)
     d.update(mindmap)
 
+    #Set Bad Pronunciation Scores
     try:
         word_pronunciation = {}
         pronunciation = {}
@@ -440,10 +468,10 @@ async def gradeSpeaking(speak: Speak):
             if math.floor(sum(v) / len(v)) < 60:
                 pronunciation[k] = str(math.floor(sum(v) / len(v)))
         d.update({"Bad Pronunciation Scores": pronunciation})
-
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
 
+    #Censor
     res, censorData = OpenAIController().censorOutput(d)
     if res:
         return SuccessDataResponse(data=censorData)
