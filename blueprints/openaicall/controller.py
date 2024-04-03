@@ -119,8 +119,9 @@ class OpenAIController():
             data = chunk.choices[0].delta.content
             queue.put(f"data: {data}\n")
           else:
-            queue.put(f"data: [DONE!]")
+            #queue.put(f"data: [DONE!]")
             break  # Exit if no content
+        queue.put(f"data: [DONE!]\n\n")
       finally:
         queue.put(None)  # Signal that streaming is done
 
