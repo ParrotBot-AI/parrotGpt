@@ -156,7 +156,7 @@ async def gradeWriting(essay: Essay):
         format = ACADEMIC_DISCUSSION_EDITING_FORMAT
     elif essay.gradeType == "Integrated Writing":
         sys_prompt = INTEGRATED_WRITING_EDITING_SYSPROMPT
-        format = ACADEMIC_DISCUSSION_EDITING_FORMAT
+        format = INTEGRATED_WRITING_EDITING_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
     dict_feedback = {}
