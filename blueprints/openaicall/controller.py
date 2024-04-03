@@ -250,5 +250,5 @@ class OpenAIController():
                   yield data
               except Empty:
                   break
-
+                
       return event_generator()
