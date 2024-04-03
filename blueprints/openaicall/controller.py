@@ -117,6 +117,7 @@ class OpenAIController():
         for chunk in response:
           if chunk.choices[0].delta.content != None:
             data = chunk.choices[0].delta.content
+            print(data)
             queue.put(f"data: {data}\n")
           else:
             queue.put(f"data: [DONE!]")
