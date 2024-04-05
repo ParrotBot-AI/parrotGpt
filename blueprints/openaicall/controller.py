@@ -55,6 +55,7 @@ class OpenAIController():
           functions=format,
           function_call = 'auto'
         )
+        print(response.choices[0].message)
         if response.choices[0].finish_reason == 'function_call':
           data = json.loads(response.choices[0].message.function_call.arguments)
         elif response.choices[0].finish_reason == 'stop':
@@ -63,7 +64,6 @@ class OpenAIController():
           return False, "OPENAI FUNCTION CALLING ERROR"
         return True, data
       except Exception as e:
-        print(response.choices[0].message)
         if i == 2:
           return False, f"{str(e)}"
 
