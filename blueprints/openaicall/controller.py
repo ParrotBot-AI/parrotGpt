@@ -42,29 +42,30 @@ class OpenAIController():
           temp,
           format
   ):
-    try:
-      response = openai.chat.completions.create(
-        model=model,
-        messages=[
-          {"role": "system", "content": sys_prompt},
-          {"role": "user", "content": user_prompt}
-        ],
-        max_tokens=token_size,
-        temperature=temp,
-        functions=format,
-        function_call = 'auto'
-      )
-      if response.choices[0].finish_reason == 'function_call':
-        #print(response.choices[0].message.function_call.arguments)
-        data = json.loads(response.choices[0].message.function_call.arguments)
-      elif response.choices[0].finish_reason == 'stop':
-        #print(response.choices[0].message.content.replace("```json\n","").replace("`",""))
-        data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
-      else:
-        return False, "OPENAI FUNCTION CALLING ERROR"
-      return True, data
-    except Exception as e:
-      return False, f"{str(e)}"
+    for i in range(3):
+      try:
+        response = openai.chat.completions.create(
+          model=model,
+          messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+          ],
+          max_tokens=token_size,
+          temperature=temp,
+          functions=format,
+          function_call = 'auto'
+        )
+        if response.choices[0].finish_reason == 'function_call':
+          data = json.loads(response.choices[0].message.function_call.arguments)
+        elif response.choices[0].finish_reason == 'stop':
+          data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
+        else:
+          return False, "OPENAI FUNCTION CALLING ERROR"
+        return True, data
+      except Exception as e:
+        print(response.choices[0].message)
+        if i == 2:
+          return False, f"{str(e)}"
 
   def censorOutput(
           self,
