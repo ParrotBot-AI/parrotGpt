@@ -105,9 +105,9 @@ async def gradeWriting(essay: Essay):
     #Set Up Grades
     try:
         sum = 0
-        for k, v in data["Grades"].items():
+        for k, v in data.items():
             sum += v
-            data["Grades"][k] = str(v)
+            data[k] = str(v)
         if essay.gradeType == "Academic Discussion":
             d["Overall"] = str(sum / 4)
         elif essay.gradeType == "Integrated Writing":
@@ -126,7 +126,7 @@ async def gradeWriting(essay: Essay):
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
     user_prompt += "\n\nScore:\n"
-    for k, v in data["Grades"].items():
+    for k, v in data.items():
         user_prompt += k + ": " + v + "\n"
 
     # Send Feedback Request
@@ -330,7 +330,7 @@ async def gradeSpeaking(speak: Speak):
     
     #Set up Grades
     try:
-        grades = data["Grades"]
+        grades = data
         grades["Grammar"] = speech_res["result"]["grammar"] // 2
         grades["Vocabulary Usage"] = speech_res["result"]["lexical_resource"] // 2
         grades["Fluency"] = speech_res["result"]["fluency_coherence"] // 2
