@@ -114,7 +114,7 @@ async def gradeWriting(essay: Essay):
             d["Overall"] = str(math.floor(sum * 4 / 3) / 4)
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
-    d.update(data)
+    d.update({"Grades":data})
 
     # Prepare Feedback Request
     if essay.gradeType == "Academic Discussion":
