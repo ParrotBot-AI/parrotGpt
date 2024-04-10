@@ -268,7 +268,7 @@ async def gradeSpeaking(speak: Speak):
             "param": {
                 "app": {
                     "userId": "guest",
-                    "applicationId": "1709716879000299",
+                    "applicationId": appKey,
                     "sig": startSig,
                     "timestamp": timestamp
                 },
