@@ -242,7 +242,7 @@ async def gradeSpeaking(speak: Speak):
     # Feed to SpeechSuper
     userId = "guest"
     timestamp = str(int(time.time()))
-    url = "https://api.speechsuper.com/speak.eval.pro"
+    url = "http://api.stkouyu.com:8080/speak.eval.pro"
     connectStr = (appKey + timestamp + secretKey).encode("utf-8")
     connectSig = hashlib.sha1(connectStr).hexdigest()
     startStr = (appKey + timestamp + userId + secretKey).encode("utf-8")
