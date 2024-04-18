@@ -9,6 +9,7 @@ setuptools~=65.5.0
 crontab~=0.23.0
 uvicorn
 pytz
-sseclient
+sseclient   
 redis==4.2.1
 simplejson==3.17.6
+tiktoken=0.6.0
