@@ -21,6 +21,7 @@ import json
 import time
 import hashlib
 import requests
+import tiktoken
 import urllib.request as urllib2
 from blueprints.openaicall.controller import OpenAIController
 from utils.response_tools import (SuccessDataResponse, ArgumentExceptionResponse)
@@ -42,6 +43,18 @@ logger = get_general_logger('gpt_res', path=abspath('logs', 'web_res'))
 # ================================== Toefl Study ===========================#
 @router.post("/writing/gradeWriting/")
 async def gradeWriting(essay: Essay):
+    #Check length of input
+    encoding = tiktoken.encoding_for_model(OPENAI_MODEL)
+    if len(encoding.encode(essay.content)) > 700:
+        if essay.gradeType == "Academic Discussion":
+            returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
+        elif essay.gradeType == "Integrated Writing":
+            returnval = EMPTY_INTEGRATED_WRITING_SCORE
+        else:
+            return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+        returnval["General Feedback"] = "Error: Input too long"
+        return SuccessDataResponse(data=returnval)
+
     d = {}
     logger.info(f"API: /writing/gradeWriting/ was called")
     # Read Request
@@ -53,7 +66,7 @@ async def gradeWriting(essay: Essay):
         format = INTEGRATED_WRITING_GRADING_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-
+    
     content = []
     new_content = []
     gpt_content = {}
@@ -76,7 +89,7 @@ async def gradeWriting(essay: Essay):
     # Use nltk sent_tokenize to separate sentences
     for i in range(len(content)):
         content[i] = sent_tokenize(content[i])
-    counter = 1
+    num_sentences = 1
 
     # Prepare Grades Request
     # new_content holds the object that will be returned
@@ -84,9 +97,9 @@ async def gradeWriting(essay: Essay):
     for i in range(len(content)):
         new_content.append({})
         for j in range(len(content[i])):
-            new_content[i][str(counter)] = content[i][j]
-            gpt_content[str(counter)] = content[i][j]
-            counter += 1
+            new_content[i][str(num_sentences)] = content[i][j]
+            gpt_content[str(num_sentences)] = content[i][j]
+            num_sentences += 1
     user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
     d.update({"Content": new_content})
 
@@ -94,7 +107,7 @@ async def gradeWriting(essay: Essay):
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=512,
         temp=1,
         format=format
@@ -125,6 +138,9 @@ async def gradeWriting(essay: Essay):
         format = INTEGRATED_WRITING_FEEDBACK_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+    format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = num_sentences
+    format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = num_sentences
+
     user_prompt += "\n\nScore:\n"
     for k, v in data.items():
         user_prompt += k + ": " + v + "\n"
@@ -133,7 +149,7 @@ async def gradeWriting(essay: Essay):
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=4096,
         temp=1,
         format=format
@@ -163,12 +179,14 @@ async def gradeWriting(essay: Essay):
     for i in range(len(feedback["Sentence Feedback"])):
         dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
+    format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = num_sentences
+    format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = num_sentences
 
     # Send Editing Request
     res, edit = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=4096,
         temp=1,
         format=format
@@ -216,7 +234,7 @@ async def gradeWriting(essay: Essay):
     res, mindmap = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=1024,
         temp=1,
         format=format
@@ -228,7 +246,6 @@ async def gradeWriting(essay: Essay):
     #Censor
     res, censorData = OpenAIController().censorOutput(d)
     if res:
-        return SuccessDataResponse(data=censorData)
         logger.info(f"API: /writing/gradeWriting/ responded")
         return SuccessDataResponse(data=censorData)
     else:
@@ -288,21 +305,25 @@ async def gradeSpeaking(speak: Speak):
     }
     data = {'text': json.dumps(params)}
     headers = {"Request-Index": "0"}
-    files = {"audio": urllib2.urlopen(speak.audioLink)}
+    try:
+        files = {"audio": urllib2.urlopen(speak.audioLink)}
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
     res = requests.post(url, data=data, headers=headers, files=files)
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
     try:
         if "error" in speech_res.keys():
             return ArgumentExceptionResponse(msg=speech_res["error"])
         elif "warning" in speech_res["result"]:
-            return ArgumentExceptionResponse(msg=speech_res["result"]["warning"]["message"])
+            returnval = EMPTY_SPEAKING_SCORE
+            returnval["General Feedback"] = speech_res["result"]["warning"]["message"]
+            return SuccessDataResponse(data=returnval)
         elif speech_res["result"]["effective_speech_length"] <= 10:
             return ArgumentExceptionResponse(msg="Error: Input too short")
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
             student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
         d.update({"Content": [student_transcript]})
-
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     
@@ -320,7 +341,7 @@ async def gradeSpeaking(speak: Speak):
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=512,
         temp=1,
         format=format
@@ -349,6 +370,8 @@ async def gradeSpeaking(speak: Speak):
     # Prepare Feedback Request
     try:
         format = SPEAKING_FEEDBACK_FORMAT
+        format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = len(student_transcript)
+        format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = len(student_transcript)
         if speak.gradeType == "Independent Speaking":
             sys_prompt = INDEPENDENT_SPEAKING_FEEDBACK_SYSPROMPT
         elif speak.gradeType == "Integrated Speaking":
@@ -368,7 +391,7 @@ async def gradeSpeaking(speak: Speak):
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=4096,
         temp=1,
         format=format
@@ -387,6 +410,8 @@ async def gradeSpeaking(speak: Speak):
     
     # Prepare Editing Request
     format=SPEAKING_EDITING_FORMAT
+    format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = len(student_transcript)
+    format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = len(student_transcript)
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_EDITING_SYSPROMPT
     elif speak.gradeType == "Integrated Speaking":
@@ -402,7 +427,7 @@ async def gradeSpeaking(speak: Speak):
     res, edit = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=4096,
         temp=1,
         format=format
@@ -445,7 +470,7 @@ async def gradeSpeaking(speak: Speak):
     res, mindmap = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=1024,
         temp=1,
         format=format
@@ -474,7 +499,6 @@ async def gradeSpeaking(speak: Speak):
     #Censor
     res, censorData = OpenAIController().censorOutput(d)
     if res:
-        return SuccessDataResponse(data=censorData)
         logger.info(f"API: /writing/gradeSpeaking/ responded")
         return SuccessDataResponse(data=censorData)
     else:
@@ -523,72 +547,78 @@ async def chatbotRespond(client_id: str):
 
     r.delete(client_id)
 
+    sys_prompt = CHATBOT_PRE_SYSPROMPT
     match data_input["toeflType"]:
         case "Reading":
             user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
-                    sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                    sys_prompt += CHATBOT_其他问题_SYSPROMPT
                     user_prompt += data_input["chatbotQuery"]
                 case "错题解析":
-                    sys_prompt = CHATBOT_错题解析_SYSPROMPT
+                    sys_prompt += CHATBOT_错题解析_SYSPROMPT
                     user_prompt += data_input["mcq"]
                 case "解题思路":
-                    sys_prompt = CHATBOT_解题思路_SYSPROMPT
+                    sys_prompt += CHATBOT_解题思路_SYSPROMPT
                     user_prompt += data_input["mcq"] + "\n" + data_input["problemMethod"]
                 case "重点信息":
-                    sys_prompt = CHATBOT_重点信息_SYSPROMPT
+                    sys_prompt += CHATBOT_重点信息_SYSPROMPT
                     user_prompt += data_input["mcq"]
                 case "段落逻辑":
-                    sys_prompt = CHATBOT_MINDMAP_SYSPROMPT
+                    sys_prompt += CHATBOT_MINDMAP_SYSPROMPT
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Listening":
             user_prompt = data_input["Main Content"] + "\n"
             match data_input["queryType"]:
                 case "其他问题":
-                    sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                    sys_prompt += CHATBOT_其他问题_SYSPROMPT
                     user_prompt += data_input["chatbotQuery"]
                 case "错题解析":
-                    sys_prompt = CHATBOT_错题解析_SYSPROMPT
+                    sys_prompt += CHATBOT_错题解析_SYSPROMPT
                     user_prompt += data_input["mcq"]
                 case "解题思路":
-                    sys_prompt = CHATBOT_解题思路_SYSPROMPT
+                    sys_prompt += CHATBOT_解题思路_SYSPROMPT
                     user_prompt += data_input["mcq"] + "\n" + data_input["problemMethod"]
                 case "重点信息":
-                    sys_prompt = CHATBOT_重点信息_SYSPROMPT
+                    sys_prompt += CHATBOT_重点信息_SYSPROMPT
                     user_prompt += data_input["mcq"]
                 case "听力逻辑":
-                    sys_prompt = CHATBOT_MINDMAP_SYSPROMPT
+                    sys_prompt += CHATBOT_MINDMAP_SYSPROMPT
                 case _:
                     return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Speaking":
             user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
-                sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                sys_prompt += CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Writing":
             user_prompt = data_input["Main Content"] + "\n"
             if data_input["queryType"] == "其他问题":
-                sys_prompt = CHATBOT_其他问题_SYSPROMPT
+                sys_prompt += CHATBOT_其他问题_SYSPROMPT
                 user_prompt += data_input["chatbotQuery"]
             else:
                 return ArgumentExceptionResponse(msg='Invalid queryType')
         case "Misc":
-            sys_prompt = CHATBOT_MISC_SYSPROMPT
+            sys_prompt += CHATBOT_MISC_SYSPROMPT
             user_prompt = data_input["chatbotQuery"]
         case _:
             return ArgumentExceptionResponse(msg='Invalid toeflType')
 
-    model = "gpt-4-0125-preview"
+    #Check length of input - bypass system and user prompt if token size is too large
+    encoding = tiktoken.encoding_for_model(OPENAI_MODEL)
+    if len(encoding.encode(data_input["chatbotQuery"])) > 100:
+        sys_prompt = "用简体中文跟学生说你的问题太长了，秋秋无法回答"
+        user_prompt = ""
+
     token_size = 1024
     temp = 0
     response = StreamingResponse(OpenAIController().OpenAiStreaming(
         sys_prompt=sys_prompt,
         user_prompt=user_prompt,
-        model=model,
+        model=OPENAI_MODEL,
         token_size=token_size,
         temp=temp
     ), media_type="text/event-stream")
@@ -607,7 +637,7 @@ async def getVocabContent(client_id: str):
     data_input = client_request
     r.delete(client_id)
 
-    model = "gpt-4-0125-preview"
+    model = OPENAI_MODEL
     token_size = 4096
     temp = 0.75
     return StreamingResponse(OpenAIController().OpenAiVocabStreaming(
