@@ -319,7 +319,9 @@ async def gradeSpeaking(speak: Speak):
             returnval["General Feedback"] = speech_res["result"]["warning"]["message"]
             return SuccessDataResponse(data=returnval)
         elif speech_res["result"]["effective_speech_length"] <= 10:
-            return ArgumentExceptionResponse(msg="Error: Input too short")
+            returnval = EMPTY_SPEAKING_SCORE
+            returnval["General Feedback"] = "Input too short."
+            return SuccessDataResponse(data=returnval)
         student_transcript = {}
         for i in range(len(speech_res["result"]["sentences"])):
             student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
