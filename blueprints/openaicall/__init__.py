@@ -316,7 +316,7 @@ async def gradeSpeaking(speak: Speak):
             return ArgumentExceptionResponse(msg=speech_res["error"])
         elif "warning" in speech_res["result"]:
             returnval = EMPTY_SPEAKING_SCORE
-            returnval["General Feedback"] = speech_res["result"]["warning"]["message"]
+            returnval["General Feedback"] = speech_res["result"]["warning"][0]["message"]
             return SuccessDataResponse(data=returnval)
         elif speech_res["result"]["effective_speech_length"] <= 10:
             returnval = EMPTY_SPEAKING_SCORE
