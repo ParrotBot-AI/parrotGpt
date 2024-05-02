@@ -8,7 +8,7 @@ from blueprints.openaicall.models import (
 from configs import (
     OPEN_AI_API_KEY,
     SPEECHSUPER_APPKEY,
-    SPEECHSUPER_SECRETKEY
+     SPEECHSUPER_SECRETKEY
 )
 # import nltk
 # nltk.download('punkt')
@@ -29,6 +29,8 @@ from utils import generate_uuid_id
 from utils.redis_tools import RedisWrapper
 from utils.logger_tools import get_general_logger
 from utils import abspath
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 openai.api_key = OPEN_AI_API_KEY
 appKey = SPEECHSUPER_APPKEY
 secretKey = SPEECHSUPER_SECRETKEY
@@ -57,6 +59,31 @@ async def gradeWriting(essay: Essay):
 
     d = {}
     logger.info(f"API: /writing/gradeWriting/ was called")
+
+    # Check similarity of student response with given content
+    corpus = [essay.prompt,essay.content]
+    vect = TfidfVectorizer(min_df=1)                                                                                                                                                                                                   
+    tfidf = vect.fit_transform(corpus)                                                                                                                                                                                                                       
+    pairwise_similarity = tfidf * tfidf.T
+    similarity_score = pairwise_similarity.toarray()
+    print(similarity_score)
+    if similarity_score[0][1] >= 0.85:
+        if essay.gradeType == "Academic Discussion":
+            returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
+        elif essay.gradeType == "Integrated Writing":
+            returnval = EMPTY_INTEGRATED_WRITING_SCORE
+        else:
+            return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+        returnval["General Feedback"] = "Plagiarism"
+        return SuccessDataResponse(data=returnval)
+    
+    # Check word count of student response
+    wordCountEnough = 1
+    if essay.gradeType == "Academic Discussion" and len(essay.content.split()) < 90:
+        wordCountEnough = 0
+    elif essay.gradeType == "Integrated Writing" and len(essay.content.split()) < 140:
+        wordCountEnough = 0
+
     # Read Request
     if essay.gradeType == "Academic Discussion":
         sys_prompt = ACADEMIC_DISCUSSION_GRADING_SYSPROMPT
@@ -89,20 +116,18 @@ async def gradeWriting(essay: Essay):
     # Use nltk sent_tokenize to separate sentences
     for i in range(len(content)):
         content[i] = sent_tokenize(content[i])
-    num_sentences = 1
-
+    num_sentences = 0
     # Prepare Grades Request
-    # new_content holds the object that will be returned
+    # new_content holds the object that will be returned to requester
     # gpt_content holds the object that gpt gets
     for i in range(len(content)):
         new_content.append({})
         for j in range(len(content[i])):
-            new_content[i][str(num_sentences)] = content[i][j]
-            gpt_content[str(num_sentences)] = content[i][j]
+            new_content[i][str(num_sentences+1)] = content[i][j]
+            gpt_content[str(num_sentences+1)] = content[i][j]
             num_sentences += 1
     user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
     d.update({"Content": new_content})
-
     # Send Grades Request
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
@@ -115,12 +140,17 @@ async def gradeWriting(essay: Essay):
     if not res:
         return ArgumentExceptionResponse(msg=data)
     
-    #Set Up Grades
+    # Set Up Grades
     try:
         sum = 0
         for k, v in data.items():
-            sum += v
-            data[k] = str(v)
+            # Maximize score to 2 if there aren't enough words
+            if not wordCountEnough and v > 2:
+                sum += 2
+                data[k] = "2"
+            else:
+                sum += v
+                data[k] = str(v)
         if essay.gradeType == "Academic Discussion":
             d["Overall"] = str(sum / 4)
         elif essay.gradeType == "Integrated Writing":
@@ -128,6 +158,7 @@ async def gradeWriting(essay: Essay):
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     d.update({"Grades":data})
+
 
     # Prepare Feedback Request
     if essay.gradeType == "Academic Discussion":

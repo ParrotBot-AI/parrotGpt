@@ -6,7 +6,7 @@ See if the given JSON consists of any content potentially sensitive to the Chine
 }
 '''
 ACADEMIC_DISCUSSION_GRADING_SYSPROMPT = '''
-You are a teacher who is grading students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. Given the discussion and their response, you are to score their contribution to the discussion, relevance, grammar, and structure/flow based on the rubric that follows.
+You are a teacher who is grading students' written exams. Students are given a topic by a professor and a discussion between two people on this topic. Then, students are meant to take a perspective on the topic and explain their reasoning behind their perspective. If the student's essay is less than 100 words,  then ignore the rubric and the scores for contribution, relevance, grammar, structure/flow should all be 2 or less. Otherwise, given the discussion and their response, you are to score their contribution to the discussion, relevance, grammar, and structure/flow based on the rubric that follows. 
 
 Contribution
 5: Includes the student's own perspective on the topic and thoroughly explains this perspective
@@ -47,7 +47,8 @@ ACADEMIC_DISCUSSION_GRADING_FORMAT = [{"name":"Academic_Discussion_Grading_Forma
                                                 "Relevance": {"description": "Score for Relevance", "enum": [1,2,3,4,5]},
                                                 "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
                                                 "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
-                                            } 
+                                            },
+                                            "required": ["Contribution", "Relevance", "Grammar", "Structure/Flow"]
 									   }
 									}]
 ACADEMIC_DISCUSSION_FEEDBACK_SYSPROMPT = '''
@@ -95,7 +96,8 @@ ACADEMIC_DISCUSSION_FEEDBACK_FORMAT = [{"name":"Academic_Discussion_Feedback_For
                                                       "Relevance": {"type": "string", "description": "Relevance Feedback in Simplified Chinese"},
                                                       "Grammar": {"type": "string", "description": "Grammar Feedback in Simplified Chinese"},
                                                       "Structure/Flow": {"type": "string", "description": "Structure/Flow Feedback in Simplified Chinese"}
-												   } 
+												   },
+                                                   "required": ["General", "Contribution", "Relevance", "Grammar", "Structure/Flow"]
 											   },
                                                "Sentence Feedback": {
                                                    "type": "array",
@@ -109,10 +111,12 @@ ACADEMIC_DISCUSSION_FEEDBACK_FORMAT = [{"name":"Academic_Discussion_Feedback_For
                                                                     "enum": ["Contribution", "Relevance", "Grammar", "Structure/Flow", "Good"]
                                                                 }
                                                             }
-                                                       }
+                                                       },
+                                                       "required": ["feedback", "feedbackType"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["General Feedback", "Sentence Feedback"]
 									   }
 									}]
 ACADEMIC_DISCUSSION_EDITING_SYSPROMPT = '''
@@ -159,7 +163,8 @@ ACADEMIC_DISCUSSION_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Forma
                                                       "Relevance": {"description": "Score for Relevance", "enum": [1,2,3,4,5]},
                                                       "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
                                                       "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
-												   } 
+												   },
+                                                   "required": ["Contribution", "Relevance", "Grammar", "Structure/Flow"]
 											   },
                                                "Edited Version": {
                                                    "type": "array",
@@ -167,10 +172,12 @@ ACADEMIC_DISCUSSION_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Forma
                                                        "type": "object",
                                                        "properties": {
                                                            "sentence": {"type": "string", "description": "Edited Version of the Sentence, No Change if sentence does not need to be edited"}
-													   }
+													   },
+                                                       "required": ["sentence"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["New Score", "Edited Version"]
 									   }
 									}]
 ACADEMIC_DISCUSSION_MINDMAP_SYSPROMPT = '''
@@ -189,7 +196,7 @@ The outline should look like this:
 If double quotes " are ever used, replace them with single quotes '.
 '''
 INTEGRATED_WRITING_GRADING_SYSPROMPT = '''
-You are a teacher who is grading students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. Given the passage, the transcript that the student listens to, and their response, you are to score their content & details given, grammar, and stucture/flow based on the rubric that follows.
+You are a teacher who is grading students' written exams. Students are given a passage to read, an audio clip to listen to, and are meant to discuss these two mediums according to the prompt in their response. If the student's essay is less than 150 words, then ignore the rubric and the scores for content & details given, grammar, and structure/flow should all be 2 or less. Otherwise, given the passage, the transcript that the student listens to, and their response, you are to score their content & details given, grammar, and stucture/flow based on the rubric that follows.
 
 Content & Details Given
 5: Response contains main ideas from both mediums, most details, and connects the two accurately while utilizing many keywords used in the passage and audio clip.
@@ -222,7 +229,8 @@ INTEGRATED_WRITING_GRADING_FORMAT = [{"name":"Integrated_Writing_Grading_Format"
                                                 "Content & Details Given": {"description": "Score for Content & Details Given", "enum": [1,2,3,4,5]},
                                                 "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
                                                 "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
-                                            }
+                                            },
+                                            "required": ["Content & Details Given", "Grammar", "Structure/Flow"]
 									   }
 									}]
 INTEGRATED_WRITING_FEEDBACK_SYSPROMPT='''
@@ -262,7 +270,8 @@ INTEGRATED_WRITING_FEEDBACK_FORMAT = [{"name":"Integrated_Writing_Feedback_Forma
                                                       "Content & Details Given": {"type": "string", "description": "Content & Details Given Feedback in Simplified Chinese"},
                                                       "Grammar": {"type": "string", "description": "Grammar Feedback in Simplified Chinese"},
                                                       "Structure/Flow": {"type": "string", "description": "Structure/Flow Feedback in Simplified Chinese"}
-												   } 
+												   },
+                                                   "required": ["General", "Content & Details Given", "Grammar", "Structure/Flow"]
 											   },
                                                "Sentence Feedback": {
                                                    "type": "array",
@@ -276,10 +285,12 @@ INTEGRATED_WRITING_FEEDBACK_FORMAT = [{"name":"Integrated_Writing_Feedback_Forma
                                                                     "enum": ["Content & Details Given", "Grammar", "Structure/Flow", "Good"]
                                                                 }
                                                             }
-                                                       }
+                                                       },
+                                                       "required": ["feedback", "feedbackType"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["General Feedback", "Sentence Feedback"]
 									   }
 									}]
 INTEGRATED_WRITING_EDITING_SYSPROMPT='''
@@ -318,7 +329,8 @@ INTEGRATED_WRITING_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Format
                                                       "Content & Details Given": {"description": "Score for Content & Details Given", "enum": [1,2,3,4,5]},
                                                       "Grammar": {"description": "Score for Grammar", "enum": [1,2,3,4,5]},
                                                       "Structure/Flow": {"description": "Score for Structure/Flow", "enum": [1,2,3,4,5]}
-												   } 
+												   },
+                                                   "required": ["Content & Details Given", "Grammar", "Structure/Flow"]
 											   },
                                                "Edited Version": {
                                                    "type": "array",
@@ -326,10 +338,12 @@ INTEGRATED_WRITING_EDITING_FORMAT = [{"name":"Academic_Discussion_Editing_Format
                                                        "type": "object",
                                                        "properties": {
                                                            "sentence": {"type": "string", "description": "Edited Version of the Sentence, No Change if sentence does not need to be edited"}
-													   }
+													   },
+                                                       "required": ["sentence"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["New Score", "Edited Version"]
 									   }
 									}]
 INTEGRATED_WRITING_MINDMAP_SYSPROMPT='''
@@ -526,7 +540,8 @@ SPEAKING_GRADING_FORMAT = [{"name":"Speaking_Grading_Format",
                                             "properties": {
                                                 "Content": {"description": "Score for Content", "enum": [1,2,3,4]},
                                                 "Coherence": {"description": "Score for Coherence", "enum": [1,2,3,4]}
-                                            } 
+                                            },
+                                            "required": ["Content", "Coherence"]
 									   }
 									}]
 SPEAKING_FEEDBACK_FORMAT = [{"name":"Speaking_Feedback_Format",
@@ -541,7 +556,8 @@ SPEAKING_FEEDBACK_FORMAT = [{"name":"Speaking_Feedback_Format",
                                                       "Coherence": {"type": "string", "description": "Coherence Feedback in Simplified Chinese"},
                                                       "Grammar and Language Use": {"type": "string", "description": "Grammar and Language Use Feedback in Simplified Chinese"},
                                                       "Delivery": {"type": "string", "description": "Delivery Feedback in Simplified Chinese"}
-												   } 
+												   },
+                                                    "required": ["General", "Content", "Coherence", "Grammar and Language Use", "Delivery"]
 											   },
                                                "Sentence Feedback": {
                                                    "type": "array",
@@ -555,10 +571,12 @@ SPEAKING_FEEDBACK_FORMAT = [{"name":"Speaking_Feedback_Format",
                                                                     "enum": ["Content", "Coherence", "Grammar and Language Use", "Good"]
                                                                 }
                                                             }
-                                                       }
+                                                       },
+                                                       "required": ["feedback", "feedbackType"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["General Feedback", "Sentence Feedback"]
 									   }
 									}]
 SPEAKING_EDITING_FORMAT = [{"name":"Speaking_Editing_Format",
@@ -571,7 +589,8 @@ SPEAKING_EDITING_FORMAT = [{"name":"Speaking_Editing_Format",
                                                       "Content": {"description": "Score for Content", "enum": [1,2,3,4]},
                                                       "Coherence": {"description": "Score for Coherence", "enum": [1,2,3,4]},
                                                       "Grammar and Language Use": {"description": "Score for Grammar and Language Use", "enum": [1,2,3,4]}
-												   }
+												   },
+                                                   "required": ["Content", "Coherence", "Grammar and Language Use"]
 											   },
                                                "Edited Version": {
                                                    "type": "array",
@@ -579,13 +598,15 @@ SPEAKING_EDITING_FORMAT = [{"name":"Speaking_Editing_Format",
                                                        "type": "object",
                                                        "properties": {
                                                            "sentence": {"type": "string", "description": "Edited Version of the Sentence, No Change if sentence does not need to be edited"}
-													   }
+													   },
+                                                       "required": ["sentence"]
 												   }
 											   }
-										   }
+										   },
+                                           "required": ["New Score", "Edited Version"]
 									   }
 									}]
-MINDMAP_FORMAT = [{"name":"Mindmap_Format", "parameters": { "type": "object", "properties": {"Mind-Map": {"type": "string", "description": "outline goes here"}}}}]
+MINDMAP_FORMAT = [{"name":"Mindmap_Format", "parameters": { "type": "object", "properties": {"Mind-Map": {"type": "string", "description": "outline goes here"}}, "required": ["Mind-Map"]}}]
 EMPTY_ACADEMIC_DISCUSSION_SCORE = {
 	"Content": [],
 	"Overall": "0",
