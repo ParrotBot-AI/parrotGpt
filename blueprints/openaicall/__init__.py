@@ -67,7 +67,7 @@ async def gradeWriting(essay: Essay):
     pairwise_similarity = tfidf * tfidf.T
     similarity_score = pairwise_similarity.toarray()
     print(similarity_score)
-    if similarity_score[0][1] >= 0.85:
+    if similarity_score[0][1] >= 0.80:
         if essay.gradeType == "Academic Discussion":
             returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
         elif essay.gradeType == "Integrated Writing":
