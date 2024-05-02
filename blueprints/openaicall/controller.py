@@ -1,11 +1,12 @@
 import openai
+import jsonschema
 from openai import OpenAI
 import json
 from blueprints.openaicall.prompts import *
 from configs import OPEN_AI_API_KEY
 from threading import Thread
 from queue import Queue, Empty
-
+from jsonschema import validate
 
 class OpenAIController():
 
@@ -44,6 +45,7 @@ class OpenAIController():
   ):
     for i in range(3):
       try:
+        data = {}
         response = openai.chat.completions.create(
           model=model,
           messages=[
@@ -62,7 +64,12 @@ class OpenAIController():
           data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
         else:
           return False, "OPENAI FUNCTION CALLING ERROR"
+        validate(instance=data, schema=format[0]["parameters"])
         return True, data
+      except jsonschema.ValidationError as e:
+         print(str(e))
+         if i == 2:
+            return False, "Schema Validation Error"
       except Exception as e:
         if i == 2:
           return False, f"{str(e)}"
