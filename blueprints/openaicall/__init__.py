@@ -126,17 +126,17 @@ async def gradeWriting(essay: Essay):
             new_content[i][str(num_sentences+1)] = content[i][j]
             gpt_content[str(num_sentences+1)] = content[i][j]
             num_sentences += 1
-    user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
     d.update({"Content": new_content})
     # Send Grades Request
     res, data = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
-        user_prompt=user_prompt,
+        user_prompt=essay.prompt + "\n\n" + essay.content,
         model=OPENAI_MODEL,
         token_size=512,
         temp=1,
         format=format
     )
+    user_prompt = essay.prompt + "\n\n" + json.dumps(gpt_content, indent=4)
     if not res:
         return ArgumentExceptionResponse(msg=data)
     
