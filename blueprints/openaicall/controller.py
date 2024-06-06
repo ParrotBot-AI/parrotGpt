@@ -58,12 +58,12 @@ class OpenAIController():
           function_call = 'auto'
         )
         print(response.choices[0].message)
-        if response.choices[0].finish_reason == 'function_call':
+        if response.choices[0].message.content == None:
+          #print(response.choices[0].message.function_call.arguments)
           data = json.loads(response.choices[0].message.function_call.arguments)
-        elif response.choices[0].finish_reason == 'stop':
-          data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
         else:
-          return False, "OPENAI FUNCTION CALLING ERROR"
+          #print(response.choices[0].message.content.replace("```json\n","").replace("`",""))
+          data = json.loads(response.choices[0].message.content.replace("```json\n","").replace("`",""))
         validate(instance=data, schema=format[0]["parameters"])
         return True, data
       except jsonschema.ValidationError as e:
@@ -85,7 +85,7 @@ class OpenAIController():
       res, status = self.GeneralOpenAICall(
         sys_prompt= CENSORSHIP_CHECKER_SYSPROMPT,
         user_prompt=json.dumps(o, indent=4),
-        model="gpt-4-0125-preview",
+        model=OPENAI_MODEL,
         token_size=128,
         temp=1
       )
