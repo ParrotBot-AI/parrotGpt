@@ -67,7 +67,7 @@ class OpenAIController():
         validate(instance=data, schema=format[0]["parameters"])
         return True, data
       except jsonschema.ValidationError as e:
-         print(str(e))
+         print(e)
          if i == 2:
             return False, "Schema Validation Error"
       except Exception as e:

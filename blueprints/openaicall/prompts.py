@@ -537,7 +537,7 @@ SPEAKING_FEEDBACK_FORMAT = [{"name":"Speaking_Feedback_Format",
                                                             "feedbackType": {
                                                                 "type": "array",
                                                                 "items": {
-                                                                    "enum": ["Content", "Coherence", "Grammar and Language Use", "Good"]
+                                                                    "enum": ["Content", "Coherence", "Grammar and Language Use", "Delivery", "Good"]
                                                                 }
                                                             }
                                                        },
