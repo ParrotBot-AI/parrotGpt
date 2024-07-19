@@ -61,23 +61,36 @@ async def gradeWriting(essay: Essay):
     logger.info(f"API: /writing/gradeWriting/ was called")
 
     # Check similarity of student response with given content
-    corpus = [essay.prompt,essay.content]
+    endOfPassage = essay.prompt.find("Source: ")
+    if endOfPassage != -1:
+        corpus = [essay.prompt[:endOfPassage],essay.content]
+    else:
+        corpus = [essay.prompt,essay.content]
     vect = TfidfVectorizer(min_df=1)                                                                                                                                                                                                   
     tfidf = vect.fit_transform(corpus)                                                                                                                                                                                                                       
     pairwise_similarity = tfidf * tfidf.T
     similarity_score = pairwise_similarity.toarray()
-    print(similarity_score)
-    if similarity_score[0][1] >= 0.80:
+    #print(similarity_score)
+    if similarity_score[0][1] >= 0.85:
         if essay.gradeType == "Academic Discussion":
             returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
         elif essay.gradeType == "Integrated Writing":
             returnval = EMPTY_INTEGRATED_WRITING_SCORE
         else:
             return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-        returnval["General Feedback"] = "Plagiarism"
+        returnval["General Feedback"] = "Plagiarism " + str(similarity_score[0][1])
         return SuccessDataResponse(data=returnval)
     
     # Check word count of student response
+    if essay.gradeType == "Academic Discussion" and len(essay.content.split()) < 10:
+        returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
+        returnval["General Feeedback"] = "Nonsense. Are you even trying?"
+        return SuccessDataResponse(data=returnval)
+    elif essay.gradeType == "Integrated Writing" and len(essay.content.split()) < 10:
+        returnval = EMPTY_INTEGRATED_WRITING_SCORE
+        returnval["General Feeedback"] = "Nonsense. Are you even trying?"
+        return SuccessDataResponse(data=returnval)
+
     wordCountEnough = 1
     if essay.gradeType == "Academic Discussion" and len(essay.content.split()) < 90:
         wordCountEnough = 0
@@ -169,8 +182,8 @@ async def gradeWriting(essay: Essay):
         format = INTEGRATED_WRITING_FEEDBACK_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
-    format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = num_sentences
-    format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = num_sentences
+    #format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = num_sentences
+    #format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = num_sentences
 
     user_prompt += "\n\nScore:\n"
     for k, v in data.items():
@@ -210,8 +223,8 @@ async def gradeWriting(essay: Essay):
     for i in range(len(feedback["Sentence Feedback"])):
         dict_feedback[str(i+1)] = feedback["Sentence Feedback"][i]["feedback"]
     user_prompt += "\n" + json.dumps(dict_feedback, indent=4)
-    format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = num_sentences
-    format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = num_sentences
+    #format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = num_sentences
+    #format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = num_sentences
 
     # Send Editing Request
     res, edit = OpenAIController().FormatOpenAICall(
@@ -226,8 +239,34 @@ async def gradeWriting(essay: Essay):
         return ArgumentExceptionResponse(msg=edit)
     
     #Set Up Sentence Feedback
+    i = 0
     sentence_feedback = {}
-    for i in range(len(feedback["Sentence Feedback"])):
+    try:
+        while i < num_sentences:
+            sentence_feedback[str(i + 1)] = {}
+            if i < len(feedback["Sentence Feedback"]):
+                sentence_feedback[str(i + 1)]["Feedback"] = feedback["Sentence Feedback"][i]["feedback"]
+                sentence_feedback[str(i + 1)]["Type"] = feedback["Sentence Feedback"][i]["feedbackType"]
+            if i < len(edit["Edited Version"]):
+                sentence_feedback[str(i + 1)]["Edited"] = edit["Edited Version"][i]["sentence"]      
+            i+=1
+        j = i
+        while j < len(feedback["Sentence Feedback"]):
+            sentence_feedback[str(i)]["Feedback"] += feedback["Sentence Feedback"][j]["feedback"]
+            sentence_feedback[str(i)]["Type"] = list(set(sentence_feedback[str(i)]["Type"]).union(set(feedback["Sentence Feedback"][j]["feedbackType"])))
+            j += 1
+        j = i
+        while j < len(edit["Edited Version"]):
+            if sentence_feedback[str(i)]["Edited"] == "No Change" and edit["Edited Version"][j]["sentence"] != "No Change":
+                sentence_feedback[str(i)]["Edited"] = edit["Edited Version"][j]["sentence"]
+            else:
+                if edit["Edited Version"][j]["sentence"] != "No Change":
+                    sentence_feedback[str(i)]["Edited"] += " " + edit["Edited Version"][j]["sentence"]
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+    #print(num_sentences, len(feedback["Sentence Feedback"]), len(edit["Edited Version"]))
+    """
+    for i in range(num_sentences):
         try:
             sentence_feedback[str(i + 1)] = {
                 "Feedback": feedback["Sentence Feedback"][i]["feedback"],
@@ -236,6 +275,7 @@ async def gradeWriting(essay: Essay):
             }
         except Exception as e:
             return ArgumentExceptionResponse(msg=str(e))
+    """
 
     d.update({"Sentence Feedback": sentence_feedback})
 
@@ -357,6 +397,7 @@ async def gradeSpeaking(speak: Speak):
         for i in range(len(speech_res["result"]["sentences"])):
             student_transcript[str(i+1)] = speech_res["result"]["sentences"][i]["sentence"]
         d.update({"Content": [student_transcript]})
+        #print(student_transcript)
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     
@@ -403,8 +444,8 @@ async def gradeSpeaking(speak: Speak):
     # Prepare Feedback Request
     try:
         format = SPEAKING_FEEDBACK_FORMAT
-        format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = len(student_transcript)
-        format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = len(student_transcript)
+        #format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = len(student_transcript)
+        #format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = len(student_transcript)
         if speak.gradeType == "Independent Speaking":
             sys_prompt = INDEPENDENT_SPEAKING_FEEDBACK_SYSPROMPT
         elif speak.gradeType == "Integrated Speaking":
@@ -443,8 +484,8 @@ async def gradeSpeaking(speak: Speak):
     
     # Prepare Editing Request
     format=SPEAKING_EDITING_FORMAT
-    format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = len(student_transcript)
-    format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = len(student_transcript)
+    #format[0]["parameters"]["properties"]["Edited Version"]["minItems"] = len(student_transcript)
+    #format[0]["parameters"]["properties"]["Edited Version"]["maxItems"] = len(student_transcript)
     if speak.gradeType == "Independent Speaking":
         sys_prompt = INDEPENDENT_SPEAKING_EDITING_SYSPROMPT
     elif speak.gradeType == "Integrated Speaking":
@@ -469,7 +510,49 @@ async def gradeSpeaking(speak: Speak):
         return ArgumentExceptionResponse(msg=edit)
     
     #Set Up Sentence Feedback
+    i = 0
     sentence_feedback = {}
+    try:
+        while i < len(student_transcript):
+            sentence_feedback[str(i + 1)] = {}
+            if i < len(feedback["Sentence Feedback"]):
+                sentence_feedback[str(i + 1)]["Feedback"] = feedback["Sentence Feedback"][i]["feedback"]
+                sentence_feedback[str(i + 1)]["Type"] = feedback["Sentence Feedback"][i]["feedbackType"]
+            if i < len(edit["Edited Version"]):
+                sentence_feedback[str(i + 1)]["Edited"] = edit["Edited Version"][i]["sentence"]      
+            i+=1
+        j = i
+        while j < len(feedback["Sentence Feedback"]):
+            sentence_feedback[str(i)]["Feedback"] += feedback["Sentence Feedback"][j]["feedback"]
+            sentence_feedback[str(i)]["Type"] = list(set(sentence_feedback[str(i)]["Type"]).union(set(feedback["Sentence Feedback"][j]["feedbackType"])))
+            j += 1
+        j = i
+        while j < len(edit["Edited Version"]):
+            if sentence_feedback[str(i)]["Edited"] == "No Change" and edit["Edited Version"][j]["sentence"] != "No Change":
+                sentence_feedback[str(i)]["Edited"] = edit["Edited Version"][j]["sentence"]
+            else:
+                if edit["Edited Version"][j]["sentence"] != "No Change":
+                    sentence_feedback[str(i)]["Edited"] += " " + edit["Edited Version"][j]["sentence"]
+            j += 1
+
+        #Remove "Delivery" from feedback types and change to "Coherence" as necessary
+        for i in range(len(student_transcript)):
+            if "Delivery" in sentence_feedback[str(i+1)]["Type"]:
+                if "Coherence" in sentence_feedback[str(i+1)]["Type"]:
+                    for j in range(len(sentence_feedback[str(i+1)]["Type"])):
+                        if sentence_feedback[str(i+1)]["Type"][j] == "Delivery":
+                            del sentence_feedback[str(i+1)]["Type"][j]
+                            break
+                else:
+                    for j in range(len(sentence_feedback[str(i+1)]["Type"])):
+                        if sentence_feedback[str(i+1)]["Type"][j] == "Delivery":
+                            sentence_feedback[str(i+1)]["Type"][j] = "Coherence"
+                            break
+        #print(len(student_transcript), len(feedback["Sentence Feedback"]), len(edit["Edited Version"]))
+    except Exception as e:
+        return ArgumentExceptionResponse(msg=str(e))
+
+    """
     for i in range(len(feedback["Sentence Feedback"])):
         try:
             sentence_feedback[str(i + 1)] = {
@@ -479,6 +562,8 @@ async def gradeSpeaking(speak: Speak):
             }
         except Exception as e:
             return ArgumentExceptionResponse(msg=str(e))
+    """
+        
     d.update({"Sentence Feedback": sentence_feedback})
 
     #Set Up Edited Score
