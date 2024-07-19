@@ -262,6 +262,7 @@ async def gradeWriting(essay: Essay):
             else:
                 if edit["Edited Version"][j]["sentence"] != "No Change":
                     sentence_feedback[str(i)]["Edited"] += " " + edit["Edited Version"][j]["sentence"]
+            j += 1
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
     #print(num_sentences, len(feedback["Sentence Feedback"]), len(edit["Edited Version"]))
