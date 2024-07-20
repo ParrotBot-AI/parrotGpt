@@ -388,7 +388,9 @@ async def gradeSpeaking(speak: Speak):
             break
         except Exception as e:
             if i == 2:
-                return ArgumentExceptionResponse(msg="Can't Connect to SpeechSuper")
+                returnval = EMPTY_SPEAKING_SCORE
+                returnval["General Feedback"] = "SpeechSuper Error"
+                return SuccessDataResponse(data=returnval)
 
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
     try:
