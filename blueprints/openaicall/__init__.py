@@ -381,7 +381,15 @@ async def gradeSpeaking(speak: Speak):
         files = {"audio": urllib2.urlopen(speak.audioLink)}
     except Exception as e:
         return ArgumentExceptionResponse(msg=str(e))
-    res = requests.post(url, data=data, headers=headers, files=files)
+    for i in range(3):
+        try:
+            print(i)
+            res = requests.post(url, data=data, headers=headers, files=files)
+            break
+        except Exception as e:
+            if i == 2:
+                return ArgumentExceptionResponse(msg="Can't Connect to SpeechSuper")
+
     speech_res = json.loads(res.text.encode('utf-8', 'ignore'))
     try:
         if "error" in speech_res.keys():
