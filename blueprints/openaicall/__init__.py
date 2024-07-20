@@ -383,7 +383,6 @@ async def gradeSpeaking(speak: Speak):
         return ArgumentExceptionResponse(msg=str(e))
     for i in range(3):
         try:
-            print(i)
             res = requests.post(url, data=data, headers=headers, files=files)
             break
         except Exception as e:
