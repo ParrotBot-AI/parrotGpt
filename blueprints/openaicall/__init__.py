@@ -84,11 +84,11 @@ async def gradeWriting(essay: Essay):
     # Check word count of student response
     if essay.gradeType == "Academic Discussion" and len(essay.content.split()) < 10:
         returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
-        returnval["General Feeedback"] = "Nonsense. Are you even trying?"
+        returnval["General Feedback"] = "Nonsense. Are you even trying?"
         return SuccessDataResponse(data=returnval)
     elif essay.gradeType == "Integrated Writing" and len(essay.content.split()) < 10:
         returnval = EMPTY_INTEGRATED_WRITING_SCORE
-        returnval["General Feeedback"] = "Nonsense. Are you even trying?"
+        returnval["General Feedback"] = "Nonsense. Are you even trying?"
         return SuccessDataResponse(data=returnval)
 
     wordCountEnough = 1
