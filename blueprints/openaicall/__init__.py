@@ -71,7 +71,7 @@ async def gradeWriting(essay: Essay):
     pairwise_similarity = tfidf * tfidf.T
     similarity_score = pairwise_similarity.toarray()
     #print(similarity_score)
-    if similarity_score[0][1] >= 0.85:
+    if similarity_score[0][1] >= 0.90:
         if essay.gradeType == "Academic Discussion":
             returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
         elif essay.gradeType == "Integrated Writing":
@@ -386,7 +386,7 @@ async def gradeSpeaking(speak: Speak):
             res = requests.post(url, data=data, headers=headers, files=files)
             break
         except Exception as e:
-            if i == 2:
+            if i == 2:  
                 returnval = EMPTY_SPEAKING_SCORE
                 returnval["General Feedback"] = "SpeechSuper Error"
                 return SuccessDataResponse(data=returnval)
@@ -634,7 +634,7 @@ async def gradeSpeaking(speak: Speak):
 
 
 # ================================== AI Assistant (streaming) ===========================#
-@router.post("/assistantChatbot_old/")
+@router.post("/assistantChatbot_old/") #depreciated
 async def chatbotRespond(chatbotMessage: ChatbotMessage):
     sys_prompt = OLD_ASSISTANT_CHATBOT_SYSPROMPT
     user_prompt = chatbotMessage.chatbotQuery
