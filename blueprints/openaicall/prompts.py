@@ -1,4 +1,4 @@
-OPENAI_MODEL = 'gpt-4o'
+OPENAI_MODEL = 'gpt-4o-mini'
 CENSORSHIP_CHECKER_SYSPROMPT = '''
 See if the given JSON consists of any content potentially sensitive to the Chinese Communist Party. If this is the case, return "ERROR". Otherwise, return "OK". Follow this format:
 {
