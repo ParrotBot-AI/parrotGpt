@@ -71,6 +71,7 @@ async def gradeWriting(essay: Essay):
     pairwise_similarity = tfidf * tfidf.T
     similarity_score = pairwise_similarity.toarray()
     #print(similarity_score)
+    plagiarism = 0
     if similarity_score[0][1] >= 0.90:
         if essay.gradeType == "Academic Discussion":
             returnval = EMPTY_ACADEMIC_DISCUSSION_SCORE
@@ -80,6 +81,8 @@ async def gradeWriting(essay: Essay):
             return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
         returnval["General Feedback"] = "Plagiarism " + str(similarity_score[0][1])
         return SuccessDataResponse(data=returnval)
+    if similarity_score[0][1] >= 0.80:
+        plagiarism = 1
     
     # Check word count of student response
     if essay.gradeType == "Academic Discussion" and len(essay.content.split()) < 10:
@@ -158,7 +161,7 @@ async def gradeWriting(essay: Essay):
         sum = 0
         for k, v in data.items():
             # Maximize score to 2 if there aren't enough words
-            if not wordCountEnough and v > 2:
+            if (not wordCountEnough or plagiarism) and v > 2:
                 sum += 2
                 data[k] = "2"
             else:
@@ -182,13 +185,16 @@ async def gradeWriting(essay: Essay):
         format = INTEGRATED_WRITING_FEEDBACK_FORMAT
     else:
         return ArgumentExceptionResponse(msg='Error: Invalid gradeType')
+    if plagiarism:
+        sys_prompt += "In the general feedback section, give standard feedback but also add that the score was decreased since the student's response is too similar to the reading passage."
+    if not wordCountEnough:
+        sys_prompt += "In the general feedback section, give standard feedback but also add that the score was decreased since the student's response doesn't contain enough words."
     #format[0]["parameters"]["properties"]["Sentence Feedback"]["minItems"] = num_sentences
     #format[0]["parameters"]["properties"]["Sentence Feedback"]["maxItems"] = num_sentences
 
     user_prompt += "\n\nScore:\n"
     for k, v in data.items():
         user_prompt += k + ": " + v + "\n"
-
     # Send Feedback Request
     res, feedback = OpenAIController().FormatOpenAICall(
         sys_prompt=sys_prompt,
@@ -377,15 +383,13 @@ async def gradeSpeaking(speak: Speak):
     }
     data = {'text': json.dumps(params)}
     headers = {"Request-Index": "0"}
-    try:
-        files = {"audio": urllib2.urlopen(speak.audioLink)}
-    except Exception as e:
-        return ArgumentExceptionResponse(msg=str(e))
     for i in range(3):
         try:
+            files = {"audio": urllib2.urlopen(speak.audioLink)}
             res = requests.post(url, data=data, headers=headers, files=files)
             break
         except Exception as e:
+            time.sleep(30)
             if i == 2:  
                 returnval = EMPTY_SPEAKING_SCORE
                 returnval["General Feedback"] = "SpeechSuper Error"
