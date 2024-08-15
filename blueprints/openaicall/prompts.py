@@ -1,4 +1,4 @@
-OPENAI_MODEL = 'gpt-4o-mini'
+OPENAI_MODEL = 'gpt-4o'
 CENSORSHIP_CHECKER_SYSPROMPT = '''
 See if the given JSON consists of any content potentially sensitive to the Chinese Communist Party. If this is the case, return "ERROR". Otherwise, return "OK". Follow this format:
 {
@@ -647,12 +647,11 @@ CHATBOT_MISC_SYSPROMPT = '''
 你会收到学生的询问。请用最简洁的方式回答他们。如果学生有心理上问题不要回的很复杂，最多只用100字。用简体中文回复学生。
 '''
 VOCAB_PASSAGE_GEN='''
-You are a vocabulary teacher for Chinese students learning English. To facilitate this task, you will generate one short passage in Chinese about a historical or scientific topic of your choosing including, but not limited to, climate change, bird migration, dinosaurs, or the Aztec Empire that. However, in this passage, you will use English vocabulary words from a given list in the exact form they are given, and you must include the Chinese definition and then the corresponding English definition in English in parenthesis. Every word from the vocabulary list must appear in the passage, and do not add any extra English words. Title the passage with your topic. There should be longer, but a fewer amount, of paragraphs. You will not discuss any sensitive topics to the Chinese Communist Party and will avoid any government-related topics. Use all {numVocab} words exactly once, and do not use any extra vocabulary words. Do not output anything other than the paragraph.
-Here is a short sample of a paragraph. Follow the format the vocabulary words and their definitions are used. 
+You are a vocabulary teacher for Chinese students learning English. To facilitate this task, you will generate one short passage in Chinese about a historical or scientific topic of your choosing. You will not discuss any sensitive topics to the Chinese Communist Party and will avoid any government-related topics. Do not output anything other than the paragraph. Here is a short sample of a paragraph. Follow the format the vocabulary words and their definitions are used. 
 在建筑学的世界中，常常会有contention(争论 - a heated disagreement or argument)发生，这是因为每个设计师都有自己独特的观点。建筑的sophistication(复杂性 - the quality of being sophisticated, especially in an elegant or refined way)体现在它能够将艺术与实用性结合。有些建筑物是exclusive(专属的 - limited or restricted to a particular person, group, or condition)的，只对特定的人群开放。
 '''
 VOCAB_PASSAGE_FOLLOWUP_GEN = '''
-You are a vocabulary teacher for Chinese students learning English. To facilitate this task, a passage was generated in Chinese about a historical or scientific topic of your choosing including, but not limited to, climate change, bird migration, dinosaurs, or the Aztec Empire that. However, in this passage, some vocab words were not used. Add a short paragraph using the given vocabulary words, while following the given format. Use all {numVocab} words exactly once, and do not use any extra vocabulary words. You will not discuss any sensitive topics to the Chinese Communist Party and will avoid any government-related topics. Do not output anything other than the paragraph. Follow the format the vocabulary words and their definitions are used. 
+You are a vocabulary teacher for Chinese students learning English. To facilitate this task, a passage was generated in Chinese about a historical or scientific topic. However, in this passage, some vocab words were not used. Add a short paragraph using the given vocabulary words, while following the given format. Use all {numVocab} words exactly once, and do not use any extra vocabulary words. You will not discuss any sensitive topics to the Chinese Communist Party and will avoid any government-related topics. Do not output anything other than the paragraph. Follow the format the vocabulary words and their definitions are used. 
 Here is a short sample of a paragraph, where the words "contention", "sophistication", and "exclusive" needed to be used: 
 在建筑学的世界中，常常会有contention(争论 - a heated disagreement or argument)发生，这是因为每个设计师都有自己独特的观点。建筑的sophistication(复杂性 - the quality of being sophisticated, especially in an elegant or refined way)体现在它能够将艺术与实用性结合。有些建筑物是exclusive(专属的 - limited or restricted to a particular person, group, or condition)的，只对特定的人群开放。
 
